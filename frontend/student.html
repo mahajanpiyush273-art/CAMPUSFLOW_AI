@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusFlow AI - Student Area</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #FFFFFF 0%, #F9E6EE 100%);
+            color: #1F2937;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Ambient blurred background circles */
+        .ambient-circle {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(80px);
+        }
+
+        .ambient-orange {
+            width: 380px;
+            height: 380px;
+            background-color: rgba(255, 88, 65, 0.15); /* Sunset orange ~15% */
+            top: -60px;
+            right: -60px;
+        }
+
+        .ambient-violet {
+            width: 420px;
+            height: 420px;
+            background-color: rgba(197, 54, 120, 0.12); /* Red-violet ~12% */
+            bottom: -80px;
+            left: -80px;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            width: 100%;
+            background-color: #C53678;
+            color: #FFFFFF;
+            padding: 14px 28px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            position: relative;
+            z-index: 10;
+        }
+
+        .top-bar-inner {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand-group {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+        }
+
+        .brand-name {
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: #FFFFFF;
+            text-decoration: none;
+        }
+
+        .brand-tagline {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 400;
+            letter-spacing: 0.02em;
+        }
+
+        .logout-link {
+            font-size: 13px;
+            font-weight: 600;
+            color: #FFFFFF;
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.15);
+            transition: background-color 0.15s ease;
+        }
+
+        .logout-link:hover {
+            background-color: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Main Content Container */
+        .main-container {
+            flex: 1;
+            max-width: 860px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 40px 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header Intro */
+        .header-section {
+            margin-bottom: 30px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            font-size: 16px;
+            color: #6B7280;
+        }
+
+        /* Shared Card Styles */
+        .card {
+            background-color: #FFFFFF;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            border: 1px solid #E5E7EB;
+        }
+
+        /* Question Box Card */
+        .question-card {
+            border-top: 4px solid #FF5841; /* Sunset orange top border for student */
+            padding: 30px;
+            margin-bottom: 36px;
+        }
+
+        .question-card label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 10px;
+        }
+
+        .question-card textarea {
+            width: 100%;
+            min-height: 110px;
+            padding: 14px;
+            background-color: #FFFFFF;
+            border: 1px solid #D1D5DB;
+            border-radius: 12px;
+            color: #1F2937;
+            font-family: inherit;
+            font-size: 15px;
+            line-height: 1.5;
+            resize: vertical;
+            margin-bottom: 18px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .question-card textarea:focus {
+            outline: none;
+            border-color: #C53678;
+            box-shadow: 0 0 0 3px rgba(197, 54, 120, 0.2);
+        }
+
+        .question-card textarea::placeholder {
+            color: #9CA3AF;
+        }
+
+        .btn-ask {
+            display: inline-block;
+            padding: 12px 28px;
+            background-color: #C53678;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(197, 54, 120, 0.25);
+            transition: background-color 0.15s ease, transform 0.1s ease;
+        }
+
+        .btn-ask:hover {
+            background-color: #A62A63;
+        }
+
+        .btn-ask:active {
+            transform: scale(0.99);
+        }
+
+        /* Three Placeholder Cards Grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .info-card {
+            padding: 26px 22px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 140px;
+        }
+
+        .info-card h2 {
+            font-size: 17px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 8px;
+        }
+
+        .info-card p {
+            font-size: 14px;
+            color: #6B7280;
+        }
+
+        /* Responsive styling for phones */
+        @media (max-width: 640px) {
+            .top-bar {
+                padding: 12px 18px;
+            }
+
+            .main-container {
+                padding: 28px 16px;
+            }
+
+            .page-title {
+                font-size: 24px;
+            }
+
+            .question-card {
+                padding: 22px 18px;
+            }
+
+            .btn-ask {
+                width: 100%;
+            }
+
+            .cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Ambient blurred background circles -->
+    <div class="ambient-circle ambient-orange" aria-hidden="true"></div>
+    <div class="ambient-circle ambient-violet" aria-hidden="true"></div>
+
+    <!-- Top Bar -->
+    <header class="top-bar">
+        <div class="top-bar-inner">
+            <div class="brand-group">
+                <a href="/" class="brand-name">CampusFlow</a>
+                <span class="brand-tagline">Ask. Verify. Act.</span>
+            </div>
+            <a href="/" class="logout-link">Sign out</a>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-container">
+        <!-- Header -->
+        <div class="header-section">
+            <h1 class="page-title">Welcome, student</h1>
+            <p class="page-subtitle">Ask a question about campus notices.</p>
+        </div>
+
+        <!-- Question Box Card -->
+        <div class="card question-card">
+            <form action="/ask" method="post">
+                <label for="question">Your Question</label>
+                <textarea id="question" name="question" placeholder="e.g., What are the library hours during finals week?" required></textarea>
+                <button type="submit" class="btn-ask">Ask</button>
+            </form>
+        </div>
+
+        <!-- Three Placeholder Cards -->
+        <div class="cards-grid">
+            <div class="card info-card">
+                <h2>Recent notices</h2>
+                <p>Coming soon</p>
+            </div>
+
+            <div class="card info-card">
+                <h2>Upcoming events</h2>
+                <p>Coming soon</p>
+            </div>
+
+            <div class="card info-card">
+                <h2>My forms</h2>
+                <p>Coming soon</p>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

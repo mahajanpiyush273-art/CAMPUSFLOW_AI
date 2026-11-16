@@ -82,9 +82,13 @@ async def admin_login(
 
 
 @app.get("/student", response_class=HTMLResponse)
-async def student_area():
-    """Placeholder endpoint for student area."""
-    return HTMLResponse("Student area (coming soon)")
+async def student_area(request: Request):
+    """Render the student area page."""
+    return templates.TemplateResponse(
+        request=request,
+        name="student.html",
+        context={"request": request},
+    )
 
 
 @app.get("/admin", response_class=HTMLResponse)
