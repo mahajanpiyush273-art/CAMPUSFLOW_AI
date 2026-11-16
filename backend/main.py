@@ -97,8 +97,91 @@ async def admin_area(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="admin.html",
-        context={"request": request, "error": None, "success": None},
+        context={
+            "request": request,
+            "error": None,
+            "success": None,
+            "title": "",
+            "category": "",
+            "date": "",
+            "notice_text": "",
+        },
     )
+
+
+@app.post("/admin/read-image", response_class=HTMLResponse)
+async def admin_read_image(
+    request: Request,
+    title: str = Form(""),
+    category: str = Form(""),
+    date: str = Form(""),
+    image: UploadFile = File(None),
+):
+    """Read and extract text from an uploaded notice image."""
+    if not image or not image.filename:
+        return templates.TemplateResponse(
+            request=request,
+            name="admin.html",
+            context={
+                "request": request,
+                "error": "Please select a JPG or PNG notice image to read.",
+                "success": None,
+                "title": title,
+                "category": category,
+                "date": date,
+                "notice_text": "",
+            },
+        )
+
+    image_bytes = await image.read()
+    if not image_bytes:
+        return templates.TemplateResponse(
+            request=request,
+            name="admin.html",
+            context={
+                "request": request,
+                "error": "The selected image file was empty. Please select a valid file.",
+                "success": None,
+                "title": title,
+                "category": category,
+                "date": date,
+                "notice_text": "",
+            },
+        )
+
+    mime_type = image.content_type or "image/jpeg"
+
+    try:
+        from backend.vision import extract_text_from_image
+
+        extracted_text = extract_text_from_image(image_bytes, mime_type=mime_type)
+        return templates.TemplateResponse(
+            request=request,
+            name="admin.html",
+            context={
+                "request": request,
+                "success": "Notice text extracted! Review or edit the text below, then save.",
+                "error": None,
+                "title": title,
+                "category": category,
+                "date": date,
+                "notice_text": extracted_text,
+            },
+        )
+    except Exception as e:
+        return templates.TemplateResponse(
+            request=request,
+            name="admin.html",
+            context={
+                "request": request,
+                "error": f"Could not read image: {str(e)}",
+                "success": None,
+                "title": title,
+                "category": category,
+                "date": date,
+                "notice_text": "",
+            },
+        )
 
 
 @app.post("/admin/upload", response_class=HTMLResponse)
@@ -122,6 +205,10 @@ async def admin_upload(
                 "request": request,
                 "error": "Please upload an image or type the notice text.",
                 "success": None,
+                "title": title,
+                "category": category,
+                "date": date,
+                "notice_text": notice_text,
             },
         )
 
@@ -137,5 +224,9 @@ async def admin_upload(
             "request": request,
             "success": success_msg,
             "error": None,
+            "title": "",
+            "category": "",
+            "date": "",
+            "notice_text": "",
         },
     )
