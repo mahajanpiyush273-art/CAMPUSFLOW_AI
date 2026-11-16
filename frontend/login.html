@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusFlow AI - Sign In</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #FFFFFF 0%, #F9E6EE 100%);
+            color: #1F2937;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Ambient blurred background circles */
+        .ambient-circle {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(80px);
+        }
+
+        .ambient-orange {
+            width: 380px;
+            height: 380px;
+            background-color: rgba(255, 88, 65, 0.15); /* Sunset orange ~15% */
+            top: -60px;
+            right: -60px;
+        }
+
+        .ambient-violet {
+            width: 420px;
+            height: 420px;
+            background-color: rgba(197, 54, 120, 0.12); /* Red-violet ~12% */
+            bottom: -80px;
+            left: -80px;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            width: 100%;
+            background-color: #C53678;
+            color: #FFFFFF;
+            padding: 14px 28px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            position: relative;
+            z-index: 10;
+        }
+
+        .top-bar-inner {
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+        }
+
+        .brand-name {
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: #FFFFFF;
+        }
+
+        .brand-tagline {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 400;
+            letter-spacing: 0.02em;
+        }
+
+        /* Main Content Container */
+        .main-content {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Shared Card Styles */
+        .card {
+            background-color: #FFFFFF;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            border: 1px solid #E5E7EB;
+        }
+
+        .card-student {
+            border-top: 4px solid #FF5841; /* Sunset orange top border */
+        }
+
+        .card-admin {
+            border-top: 4px solid #C53678; /* Red-violet top border */
+        }
+
+        /* Icon Circles */
+        .icon-circle {
+            width: 68px;
+            height: 68px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            flex-shrink: 0;
+        }
+
+        .icon-orange {
+            background-color: #FF5841;
+        }
+
+        .icon-violet {
+            background-color: #C53678;
+        }
+
+        .svg-icon {
+            width: 34px;
+            height: 34px;
+        }
+
+        /* Step 1: Chooser */
+        .chooser-section {
+            width: 100%;
+            max-width: 680px;
+            text-align: center;
+        }
+
+        .chooser-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 8px;
+        }
+
+        .chooser-subtitle {
+            font-size: 16px;
+            color: #6B7280;
+            margin-bottom: 36px;
+        }
+
+        .cards-row {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+        }
+
+        .role-card {
+            flex: 1;
+            min-width: 250px;
+            max-width: 320px;
+            padding: 40px 28px;
+            text-decoration: none;
+            color: #1F2937;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+        }
+
+        .role-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 30px -10px rgba(0, 0, 0, 0.1), 0 10px 15px -5px rgba(0, 0, 0, 0.05);
+        }
+
+        .role-heading {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 10px;
+        }
+
+        .role-description {
+            font-size: 14px;
+            color: #6B7280;
+            line-height: 1.5;
+        }
+
+        /* Step 2: Login Form */
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            padding: 38px 34px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+        }
+
+        .back-nav {
+            width: 100%;
+            text-align: left;
+            margin-bottom: 16px;
+        }
+
+        .back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #C53678;
+            text-decoration: none;
+            transition: color 0.15s ease;
+        }
+
+        .back-link:hover {
+            color: #A62A63;
+            text-decoration: underline;
+        }
+
+        .login-heading {
+            font-size: 24px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 24px;
+        }
+
+        .login-form {
+            width: 100%;
+            text-align: left;
+        }
+
+        .field-group {
+            margin-bottom: 20px;
+        }
+
+        .field-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 8px;
+        }
+
+        .field-group input {
+            width: 100%;
+            padding: 12px 14px;
+            background-color: #FFFFFF;
+            border: 1px solid #D1D5DB;
+            border-radius: 12px;
+            color: #1F2937;
+            font-size: 14px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .field-group input:focus {
+            outline: none;
+            border-color: #C53678;
+            box-shadow: 0 0 0 3px rgba(197, 54, 120, 0.2);
+        }
+
+        .field-group input::placeholder {
+            color: #9CA3AF;
+        }
+
+        .error-message {
+            background-color: #FFF1EE;
+            border-left: 4px solid #FF5841;
+            border-top: 1px solid rgba(255, 88, 65, 0.2);
+            border-right: 1px solid rgba(255, 88, 65, 0.2);
+            border-bottom: 1px solid rgba(255, 88, 65, 0.2);
+            color: #1F2937;
+            padding: 12px 14px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 13px 18px;
+            background-color: #C53678;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.15s ease, transform 0.1s ease;
+            box-shadow: 0 4px 10px rgba(197, 54, 120, 0.25);
+        }
+
+        .btn-submit:hover {
+            background-color: #A62A63;
+        }
+
+        .btn-submit:active {
+            transform: scale(0.99);
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 640px) {
+            .top-bar {
+                padding: 12px 18px;
+            }
+
+            .main-content {
+                padding: 32px 16px;
+            }
+
+            .chooser-title {
+                font-size: 24px;
+            }
+
+            .cards-row {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .role-card {
+                width: 100%;
+                max-width: 100%;
+                padding: 30px 20px;
+            }
+
+            .login-card {
+                padding: 30px 20px;
+            }
+
+            .login-heading {
+                font-size: 22px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Ambient blurred background circles -->
+    <div class="ambient-circle ambient-orange" aria-hidden="true"></div>
+    <div class="ambient-circle ambient-violet" aria-hidden="true"></div>
+
+    <!-- Top Bar -->
+    <header class="top-bar">
+        <div class="top-bar-inner">
+            <span class="brand-name">CampusFlow</span>
+            <span class="brand-tagline">Ask. Verify. Act.</span>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+        {% if not role %}
+        <!-- Step 1: Role Chooser -->
+        <div class="chooser-section">
+            <h1 class="chooser-title">Welcome to CampusFlow</h1>
+            <p class="chooser-subtitle">Choose how you want to sign in.</p>
+
+            <div class="cards-row">
+                <a href="/login/student" class="card card-student role-card">
+                    <div class="icon-circle icon-orange">
+                        <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                            <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                        </svg>
+                    </div>
+                    <h2 class="role-heading">Student</h2>
+                    <p class="role-description">Access coursework, schedules, and campus AI services.</p>
+                </a>
+
+                <a href="/login/admin" class="card card-admin role-card">
+                    <div class="icon-circle icon-violet">
+                        <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                    </div>
+                    <h2 class="role-heading">Admin</h2>
+                    <p class="role-description">Manage campus operations, system configurations, and staff controls.</p>
+                </a>
+            </div>
+        </div>
+        {% else %}
+        <!-- Step 2: Login Form -->
+        <div class="card {% if role == 'student' %}card-student{% else %}card-admin{% endif %} login-card">
+            <div class="back-nav">
+                <a href="/" class="back-link">&larr; Back to role selection</a>
+            </div>
+
+            <div class="icon-circle {% if role == 'student' %}icon-orange{% else %}icon-violet{% endif %}">
+                {% if role == 'student' %}
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 10v6M2 10l10-5 10 5-10 5z"/>
+                    <path d="M6 12v5c3 3 9 3 12 0v-5"/>
+                </svg>
+                {% else %}
+                <svg class="svg-icon" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                </svg>
+                {% endif %}
+            </div>
+
+            <h1 class="login-heading">{% if role == 'student' %}Student sign in{% else %}Admin sign in{% endif %}</h1>
+
+            <form action="/login/{{ role }}" method="POST" class="login-form">
+                <div class="field-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" placeholder="Enter username" required autocomplete="username">
+                </div>
+
+                <div class="field-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" placeholder="Enter password" required autocomplete="current-password">
+                </div>
+
+                {% if error %}
+                <div class="error-message">
+                    {{ error }}
+                </div>
+                {% endif %}
+
+                <button type="submit" class="btn-submit">Sign in</button>
+            </form>
+        </div>
+        {% endif %}
+    </main>
+</body>
+</html>
