@@ -1,5 +1,5 @@
 from pathlib import Path
-from fastapi import FastAPI, Form, Request, status
+from fastapi import FastAPI, File, Form, Request, UploadFile, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.templating import Jinja2Templates
 
@@ -92,6 +92,50 @@ async def student_area(request: Request):
 
 
 @app.get("/admin", response_class=HTMLResponse)
-async def admin_area():
-    """Placeholder endpoint for admin area."""
-    return HTMLResponse("Admin area (coming soon)")
+async def admin_area(request: Request):
+    """Render the admin dashboard page."""
+    return templates.TemplateResponse(
+        request=request,
+        name="admin.html",
+        context={"request": request, "error": None, "success": None},
+    )
+
+
+@app.post("/admin/upload", response_class=HTMLResponse)
+async def admin_upload(
+    request: Request,
+    title: str = Form(""),
+    category: str = Form(""),
+    date: str = Form(""),
+    image: UploadFile = File(None),
+    notice_text: str = Form(""),
+):
+    """Process notice upload and enforce the either-or rule."""
+    has_image = image is not None and bool(image.filename)
+    has_text = bool(notice_text.strip())
+
+    if not has_image and not has_text:
+        return templates.TemplateResponse(
+            request=request,
+            name="admin.html",
+            context={
+                "request": request,
+                "error": "Please upload an image or type the notice text.",
+                "success": None,
+            },
+        )
+
+    if has_image:
+        success_msg = f"Notice image '{title}' uploaded and saved successfully!"
+    else:
+        success_msg = f"Notice '{title}' written and saved successfully!"
+
+    return templates.TemplateResponse(
+        request=request,
+        name="admin.html",
+        context={
+            "request": request,
+            "success": success_msg,
+            "error": None,
+        },
+    )

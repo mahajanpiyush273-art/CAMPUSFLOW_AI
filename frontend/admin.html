@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusFlow AI - Admin Dashboard</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #FFFFFF 0%, #F9E6EE 100%);
+            color: #1F2937;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Ambient blurred background circles */
+        .ambient-circle {
+            position: fixed;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 0;
+            filter: blur(80px);
+        }
+
+        .ambient-orange {
+            width: 380px;
+            height: 380px;
+            background-color: rgba(255, 88, 65, 0.15); /* Sunset orange ~15% */
+            top: -60px;
+            right: -60px;
+        }
+
+        .ambient-violet {
+            width: 420px;
+            height: 420px;
+            background-color: rgba(197, 54, 120, 0.12); /* Red-violet ~12% */
+            bottom: -80px;
+            left: -80px;
+        }
+
+        /* Top Bar */
+        .top-bar {
+            width: 100%;
+            background-color: #C53678;
+            color: #FFFFFF;
+            padding: 14px 28px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            position: relative;
+            z-index: 10;
+        }
+
+        .top-bar-inner {
+            max-width: 1060px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand-group {
+            display: flex;
+            align-items: baseline;
+            gap: 14px;
+        }
+
+        .brand-name {
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: -0.01em;
+            color: #FFFFFF;
+            text-decoration: none;
+        }
+
+        .brand-tagline {
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.85);
+            font-weight: 400;
+            letter-spacing: 0.02em;
+        }
+
+        .logout-link {
+            font-size: 13px;
+            font-weight: 600;
+            color: #FFFFFF;
+            text-decoration: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            background-color: rgba(255, 255, 255, 0.15);
+            transition: background-color 0.15s ease;
+        }
+
+        .logout-link:hover {
+            background-color: rgba(255, 255, 255, 0.25);
+        }
+
+        /* Main Content Container */
+        .main-container {
+            flex: 1;
+            max-width: 1060px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 40px 24px;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Header Intro */
+        .header-section {
+            margin-bottom: 28px;
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 8px;
+        }
+
+        .page-subtitle {
+            font-size: 16px;
+            color: #6B7280;
+        }
+
+        /* Error and Success Alert Messages */
+        .error-message {
+            background-color: #FFF1EE;
+            border-left: 4px solid #FF5841;
+            border-top: 1px solid rgba(255, 88, 65, 0.2);
+            border-right: 1px solid rgba(255, 88, 65, 0.2);
+            border-bottom: 1px solid rgba(255, 88, 65, 0.2);
+            color: #1F2937;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 26px;
+            line-height: 1.4;
+        }
+
+        .success-message {
+            background-color: #ECFDF5;
+            border-left: 4px solid #10B981;
+            border-top: 1px solid rgba(16, 185, 129, 0.2);
+            border-right: 1px solid rgba(16, 185, 129, 0.2);
+            border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+            color: #065F46;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 26px;
+            line-height: 1.4;
+        }
+
+        /* Shared Card Styles */
+        .card {
+            background-color: #FFFFFF;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+            border: 1px solid #E5E7EB;
+        }
+
+        /* Two Separate Action Cards Grid */
+        .actions-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 32px;
+            align-items: start;
+        }
+
+        .form-card {
+            padding: 30px 26px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-write {
+            border-top: 4px solid #C53678; /* Red-violet top border */
+        }
+
+        .card-upload {
+            border-top: 4px solid #FF5841; /* Sunset orange top border */
+        }
+
+        .card-header-group {
+            margin-bottom: 20px;
+        }
+
+        .card-badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 4px 8px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+        }
+
+        .badge-write {
+            background-color: #FCE7F1;
+            color: #C53678;
+        }
+
+        .badge-upload {
+            background-color: #FFF1EE;
+            color: #FF5841;
+        }
+
+        .form-card h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 4px;
+        }
+
+        .card-desc {
+            font-size: 13px;
+            color: #6B7280;
+            line-height: 1.4;
+        }
+
+        .field-group {
+            margin-bottom: 18px;
+        }
+
+        .field-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #1F2937;
+            margin-bottom: 6px;
+        }
+
+        .field-hint {
+            font-size: 12px;
+            color: #6B7280;
+            margin-top: 4px;
+        }
+
+        .field-group input,
+        .field-group select,
+        .field-group textarea {
+            width: 100%;
+            padding: 11px 13px;
+            background-color: #FFFFFF;
+            border: 1px solid #D1D5DB;
+            border-radius: 12px;
+            color: #1F2937;
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color 0.15s ease, box-shadow 0.15s ease;
+        }
+
+        .field-group input:focus,
+        .field-group select:focus,
+        .field-group textarea:focus {
+            outline: none;
+            border-color: #C53678;
+            box-shadow: 0 0 0 3px rgba(197, 54, 120, 0.2);
+        }
+
+        .field-group input::placeholder,
+        .field-group textarea::placeholder {
+            color: #9CA3AF;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 14px;
+        }
+
+        .field-group textarea {
+            min-height: 130px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        /* File Upload Field */
+        .field-group input[type="file"] {
+            padding: 9px 12px;
+            cursor: pointer;
+        }
+
+        .field-group input[type="file"]::file-selector-button {
+            background-color: #F3F4F6;
+            color: #1F2937;
+            border: 1px solid #D1D5DB;
+            border-radius: 8px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 10px;
+            transition: background-color 0.15s ease;
+        }
+
+        .field-group input[type="file"]::file-selector-button:hover {
+            background-color: #E5E7EB;
+        }
+
+        /* Submit Buttons */
+        .btn-submit {
+            width: 100%;
+            padding: 13px 20px;
+            color: #FFFFFF;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background-color 0.15s ease, transform 0.1s ease;
+        }
+
+        .btn-write {
+            background-color: #C53678;
+            box-shadow: 0 4px 10px rgba(197, 54, 120, 0.25);
+        }
+
+        .btn-write:hover {
+            background-color: #A62A63;
+        }
+
+        .btn-upload {
+            background-color: #FF5841;
+            box-shadow: 0 4px 10px rgba(255, 88, 65, 0.25);
+        }
+
+        .btn-upload:hover {
+            background-color: #E0432E;
+        }
+
+        .btn-submit:active {
+            transform: scale(0.99);
+        }
+
+        /* Placeholder Card */
+        .info-card {
+            padding: 26px 24px;
+        }
+
+        .info-card h2 {
+            font-size: 17px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 8px;
+        }
+
+        .info-card p {
+            font-size: 14px;
+            color: #6B7280;
+        }
+
+        /* Responsive styling for phones & tablets */
+        @media (max-width: 768px) {
+            .top-bar {
+                padding: 12px 18px;
+            }
+
+            .main-container {
+                padding: 28px 16px;
+            }
+
+            .page-title {
+                font-size: 24px;
+            }
+
+            .actions-grid {
+                grid-template-columns: 1fr;
+                gap: 24px;
+            }
+
+            .form-card {
+                padding: 24px 18px;
+            }
+
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Ambient blurred background circles -->
+    <div class="ambient-circle ambient-orange" aria-hidden="true"></div>
+    <div class="ambient-circle ambient-violet" aria-hidden="true"></div>
+
+    <!-- Top Bar -->
+    <header class="top-bar">
+        <div class="top-bar-inner">
+            <div class="brand-group">
+                <a href="/" class="brand-name">CampusFlow</a>
+                <span class="brand-tagline">Ask. Verify. Act.</span>
+            </div>
+            <a href="/" class="logout-link">Sign out</a>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="main-container">
+        <!-- Header -->
+        <div class="header-section">
+            <h1 class="page-title">Admin dashboard</h1>
+            <p class="page-subtitle">Publish a notice for students by writing text or uploading an official notice image.</p>
+        </div>
+
+        {% if error %}
+        <div class="error-message">
+            {{ error }}
+        </div>
+        {% endif %}
+
+        {% if success %}
+        <div class="success-message">
+            {{ success }}
+        </div>
+        {% endif %}
+
+        <!-- Two Separate Action Cards: Write Notice vs Upload Notice -->
+        <div class="actions-grid">
+            <!-- Option 1: Write a Notice -->
+            <div class="card form-card card-write">
+                <div class="card-header-group">
+                    <span class="card-badge badge-write">Option 1</span>
+                    <h2>Write notice</h2>
+                    <p class="card-desc">Type and publish notice content directly for students to read.</p>
+                </div>
+
+                <form action="/admin/upload" method="post">
+                    <div class="field-group">
+                        <label for="write-title">Title</label>
+                        <input type="text" id="write-title" name="title" placeholder="e.g., End Semester Examination Schedule" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="field-group">
+                            <label for="write-category">Category</label>
+                            <select id="write-category" name="category" required>
+                                <option value="" disabled selected>Select category</option>
+                                <option value="Fees">Fees</option>
+                                <option value="Exams">Exams</option>
+                                <option value="Forms">Forms</option>
+                                <option value="Events">Events</option>
+                                <option value="Admissions">Admissions</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="write-date">Date</label>
+                            <input type="date" id="write-date" name="date" required>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="write-text">Notice text</label>
+                        <textarea id="write-text" name="notice_text" placeholder="Type the complete notice details here..." required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn-submit btn-write">Save written notice</button>
+                </form>
+            </div>
+
+            <!-- Option 2: Upload Notice Image -->
+            <div class="card form-card card-upload">
+                <div class="card-header-group">
+                    <span class="card-badge badge-upload">Option 2</span>
+                    <h2>Upload notice image</h2>
+                    <p class="card-desc">Upload a signed notice flyer, circular, or announcement photo.</p>
+                </div>
+
+                <form action="/admin/upload" method="post" enctype="multipart/form-data">
+                    <div class="field-group">
+                        <label for="upload-title">Title</label>
+                        <input type="text" id="upload-title" name="title" placeholder="e.g., Circular: Campus Hostel Guidelines" required>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="field-group">
+                            <label for="upload-category">Category</label>
+                            <select id="upload-category" name="category" required>
+                                <option value="" disabled selected>Select category</option>
+                                <option value="Fees">Fees</option>
+                                <option value="Exams">Exams</option>
+                                <option value="Forms">Forms</option>
+                                <option value="Events">Events</option>
+                                <option value="Admissions">Admissions</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+
+                        <div class="field-group">
+                            <label for="upload-date">Date</label>
+                            <input type="date" id="upload-date" name="date" required>
+                        </div>
+                    </div>
+
+                    <div class="field-group">
+                        <label for="upload-image">Notice image (JPG or PNG)</label>
+                        <input type="file" id="upload-image" name="image" accept=".jpg,.jpeg,.png,image/jpeg,image/png" required>
+                        <p class="field-hint">Upload a clear photo or scanned copy of the notice.</p>
+                    </div>
+
+                    <button type="submit" class="btn-submit btn-upload">Upload notice image</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Placeholder Card: Unanswered Questions -->
+        <div class="card info-card">
+            <h2>Unanswered questions</h2>
+            <p>Coming soon</p>
+        </div>
+    </main>
+</body>
+</html>
