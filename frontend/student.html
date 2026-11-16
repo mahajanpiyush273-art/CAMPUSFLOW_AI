@@ -105,7 +105,7 @@
         /* Main Content Container */
         .main-container {
             flex: 1;
-            max-width: 860px;
+            max-width: 880px;
             width: 100%;
             margin: 0 auto;
             padding: 40px 24px;
@@ -115,7 +115,7 @@
 
         /* Header Intro */
         .header-section {
-            margin-bottom: 30px;
+            margin-bottom: 28px;
         }
 
         .page-title {
@@ -141,8 +141,8 @@
         /* Question Box Card */
         .question-card {
             border-top: 4px solid #FF5841; /* Sunset orange top border for student */
-            padding: 30px;
-            margin-bottom: 36px;
+            padding: 28px;
+            margin-bottom: 30px;
         }
 
         .question-card label {
@@ -155,7 +155,7 @@
 
         .question-card textarea {
             width: 100%;
-            min-height: 110px;
+            min-height: 95px;
             padding: 14px;
             background-color: #FFFFFF;
             border: 1px solid #D1D5DB;
@@ -165,7 +165,7 @@
             font-size: 15px;
             line-height: 1.5;
             resize: vertical;
-            margin-bottom: 18px;
+            margin-bottom: 16px;
             transition: border-color 0.15s ease, box-shadow 0.15s ease;
         }
 
@@ -181,7 +181,7 @@
 
         .btn-ask {
             display: inline-block;
-            padding: 12px 28px;
+            padding: 12px 30px;
             background-color: #C53678;
             color: #FFFFFF;
             border: none;
@@ -201,7 +201,157 @@
             transform: scale(0.99);
         }
 
-        /* Three Placeholder Cards Grid */
+        /* Answer Card */
+        .answer-card {
+            padding: 28px;
+            margin-bottom: 32px;
+        }
+
+        .verified-card {
+            border-top: 4px solid #10B981; /* Green border for verified */
+        }
+
+        .not-verified-card {
+            border-top: 4px solid #FF5841; /* Orange border for unverified */
+            background-color: #FFF1EE;
+        }
+
+        .answer-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            padding: 5px 10px;
+            border-radius: 6px;
+        }
+
+        .badge-verified {
+            background-color: #ECFDF5;
+            color: #065F46;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .badge-unverified {
+            background-color: #FEF2F2;
+            color: #991B1B;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        .badge-conf {
+            background-color: #F3F4F6;
+            color: #374151;
+            font-weight: 600;
+        }
+
+        .badge-conf-low {
+            background-color: #FEE2E2;
+            color: #991B1B;
+            font-weight: 600;
+        }
+
+        .asked-question {
+            font-size: 14px;
+            color: #4B5563;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .ai-answer {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1F2937;
+            line-height: 1.5;
+            margin-bottom: 20px;
+        }
+
+        .unverified-message {
+            font-size: 15px;
+            color: #1F2937;
+            line-height: 1.6;
+        }
+
+        .unverified-message a {
+            color: #C53678;
+            font-weight: 600;
+        }
+
+        /* Source citation box */
+        .source-box {
+            background-color: #F9FAFB;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .source-label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6B7280;
+            margin-bottom: 4px;
+        }
+
+        .source-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1F2937;
+            margin-bottom: 6px;
+        }
+
+        .source-meta {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            color: #6B7280;
+            margin-bottom: 10px;
+        }
+
+        .meta-tag {
+            background-color: #E5E7EB;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .source-details {
+            font-size: 13px;
+            color: #6B7280;
+            cursor: pointer;
+        }
+
+        .source-details summary {
+            font-weight: 600;
+            color: #C53678;
+            outline: none;
+        }
+
+        .source-text {
+            margin-top: 10px;
+            padding: 12px;
+            background-color: #FFFFFF;
+            border: 1px solid #E5E7EB;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.5;
+            color: #374151;
+            white-space: pre-wrap;
+        }
+
+        /* Three Feature Cards Grid */
         .cards-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -209,23 +359,50 @@
         }
 
         .info-card {
-            padding: 26px 22px;
+            padding: 24px 20px;
             display: flex;
             flex-direction: column;
-            justify-content: space-between;
-            min-height: 140px;
+            min-height: 150px;
         }
 
         .info-card h2 {
-            font-size: 17px;
+            font-size: 16px;
             font-weight: 700;
             color: #1F2937;
-            margin-bottom: 8px;
+            margin-bottom: 10px;
         }
 
-        .info-card p {
-            font-size: 14px;
+        .notices-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .notice-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #F3F4F6;
+        }
+
+        .notice-item:last-child {
+            border-bottom: none;
+        }
+
+        .notice-item-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: #1F2937;
+            line-height: 1.4;
+        }
+
+        .notice-item-meta {
+            font-size: 11px;
             color: #6B7280;
+            margin-top: 2px;
+        }
+
+        .empty-text {
+            font-size: 13px;
+            color: #9CA3AF;
         }
 
         /* Responsive styling for phones */
@@ -242,8 +419,9 @@
                 font-size: 24px;
             }
 
-            .question-card {
-                padding: 22px 18px;
+            .question-card,
+            .answer-card {
+                padding: 20px 16px;
             }
 
             .btn-ask {
@@ -284,26 +462,88 @@
         <div class="card question-card">
             <form action="/ask" method="post">
                 <label for="question">Your Question</label>
-                <textarea id="question" name="question" placeholder="e.g., What are the library hours during finals week?" required></textarea>
+                <textarea id="question" name="question" placeholder="e.g., When do final semester examinations begin?" required>{{ question or '' }}</textarea>
                 <button type="submit" class="btn-ask">Ask</button>
             </form>
         </div>
 
-        <!-- Three Placeholder Cards -->
+        {% if has_asked %}
+            {% if is_verified %}
+            <!-- Verified Answer Card -->
+            <div class="card answer-card verified-card">
+                <div class="answer-header">
+                    <span class="badge badge-verified">Verified Notice Answer</span>
+                    <span class="badge badge-conf">Match Confidence: {{ confidence }}%</span>
+                </div>
+
+                <div class="asked-question">
+                    <strong>Question:</strong> {{ question }}
+                </div>
+
+                <div class="ai-answer">
+                    {{ answer }}
+                </div>
+
+                <div class="source-box">
+                    <div class="source-label">Approved Source Notice</div>
+                    <div class="source-title">{{ matched_notice.title }}</div>
+                    <div class="source-meta">
+                        <span class="meta-tag">{{ matched_notice.category }}</span>
+                        <span class="meta-date">Notice Date: {{ matched_notice.notice_date }}</span>
+                    </div>
+
+                    <details class="source-details">
+                        <summary>View official notice text</summary>
+                        <div class="source-text">{{ matched_notice.text }}</div>
+                    </details>
+                </div>
+            </div>
+            {% else %}
+            <!-- Not Verified Card -->
+            <div class="card answer-card not-verified-card">
+                <div class="answer-header">
+                    <span class="badge badge-unverified">Not Verified</span>
+                    <span class="badge badge-conf-low">Match Confidence: {{ confidence }}%</span>
+                </div>
+
+                <div class="asked-question">
+                    <strong>Question:</strong> {{ question }}
+                </div>
+
+                <div class="unverified-message">
+                    <strong>No verified campus notice answers this question.</strong><br>
+                    CampusFlow only provides answers directly grounded in approved university notices. For official confirmation or assistance, please contact the administrative office at <a href="mailto:admin@campus.edu">admin@campus.edu</a> or visit the student help desk in the Administrative Block.
+                </div>
+            </div>
+            {% endif %}
+        {% endif %}
+
+        <!-- Three Feature Cards -->
         <div class="cards-grid">
             <div class="card info-card">
                 <h2>Recent notices</h2>
-                <p>Coming soon</p>
+                {% if recent_notices %}
+                <ul class="notices-list">
+                    {% for n in recent_notices[:4] %}
+                    <li class="notice-item">
+                        <div class="notice-item-title">{{ n.title }}</div>
+                        <div class="notice-item-meta">{{ n.category }} &bull; {{ n.notice_date }}</div>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="empty-text">No notices published yet.</p>
+                {% endif %}
             </div>
 
             <div class="card info-card">
                 <h2>Upcoming events</h2>
-                <p>Coming soon</p>
+                <p class="empty-text">Coming soon</p>
             </div>
 
             <div class="card info-card">
                 <h2>My forms</h2>
-                <p>Coming soon</p>
+                <p class="empty-text">Coming soon</p>
             </div>
         </div>
     </main>
