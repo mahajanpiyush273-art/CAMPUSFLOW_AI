@@ -1,4 +1,10 @@
-venv/
 .env
+.venv/
+venv/
 __pycache__/
 *.db
+*.db-wal
+*.db-shm
+uploads/
+tests/results.csv
+.DS_Store
