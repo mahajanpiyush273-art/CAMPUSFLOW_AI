@@ -1,20 +1,415 @@
 """
 CampusFlow AI - Admin Router
-Handles administrative document management, AI recheck, review queue,
-office administration, form submissions review, and system health checks.
+Handles document upload, AI extraction, review & recheck loop, publishing,
+unpublishing, deletions, deadline scheduling, and system health checks.
 """
 
-from typing import Any, Dict
-from fastapi import APIRouter, Depends
+from datetime import date, datetime, timedelta
+import json
+from pathlib import Path
+import time
+from typing import Any, Dict, List, Optional
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile, status
+from pydantic import BaseModel
 
+from backend.config import CATEGORIES, DOC_TYPES, UPLOAD_DIR
+from backend.database import get_connection
+from backend.extraction import extract_and_validate_document, run_deterministic_validators
+from backend.ingest import extract_text_from_file, index_document, remove_document_index
 from backend.llm import get_provider_health
 from backend.security import require_role
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
 
 
+class DeadlineItem(BaseModel):
+    label: str
+    date: str
+    time: Optional[str] = None
+    evidence: Optional[str] = None
+
+
+class EventDetails(BaseModel):
+    start: Optional[str] = None
+    venue: Optional[str] = None
+    registration_url: Optional[str] = None
+
+
+class DocumentUpdateRequest(BaseModel):
+    title: Optional[str] = None
+    doc_type: Optional[str] = None
+    category: Optional[str] = None
+    department: Optional[str] = None
+    office_id: Optional[int] = None
+    publish_date: Optional[str] = None
+    expiry_date: Optional[str] = None
+    raw_text: Optional[str] = None
+    summary: Optional[str] = None
+    related_form_id: Optional[int] = None
+    event_start: Optional[str] = None
+    venue: Optional[str] = None
+    registration_url: Optional[str] = None
+    deadlines: Optional[List[DeadlineItem]] = None
+
+
+class PublishRequest(BaseModel):
+    confirmed: bool
+
+
 @router.get("/health")
 async def admin_health_check(user: Dict[str, Any] = Depends(require_role("admin"))):
     """Return AI model provider availability and active configurations without exposing keys."""
-    health_info = get_provider_health()
-    return health_info
+    return get_provider_health()
+
+
+@router.post("/documents/upload")
+async def upload_document(
+    request: Request,
+    file: Optional[UploadFile] = File(None),
+    pasted_text: Optional[str] = Form(None),
+    doc_type: Optional[str] = Form(None),
+    user: Dict[str, Any] = Depends(require_role("admin")),
+):
+    """
+    Step 1 & 2 of Admin Wizard:
+    Accepts file upload (PDF/Word/Text/Image) OR pasted text.
+    Creates a hidden DRAFT document, runs AI extraction + deterministic validation,
+    and returns the draft metadata and flags.
+    """
+    raw_text = ""
+    source_type = "typed"
+    original_filename = None
+    stored_path = None
+
+    if file and file.filename:
+        original_filename = file.filename
+        source_type = "file" if not Path(file.filename).suffix.lower() in [".png", ".jpg", ".jpeg"] else "image"
+        file_bytes = await file.read()
+        if not file_bytes:
+            raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+        # Save to uploads directory with timestamped unique filename
+        UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        safe_name = f"{int(time.time())}_{Path(file.filename).name.replace(' ', '_')}"
+        dest_path = UPLOAD_DIR / safe_name
+        dest_path.write_bytes(file_bytes)
+        stored_path = str(dest_path)
+
+        # Extract readable text
+        raw_text = extract_text_from_file(file_bytes, filename=file.filename, mime_type=file.content_type)
+
+    elif pasted_text and pasted_text.strip():
+        raw_text = pasted_text.strip()
+        source_type = "typed"
+
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Please upload a document file (PDF, Word, Image, Text) or paste the notice text."
+        )
+
+    # Run AI extraction and deterministic validation
+    extraction_result = extract_and_validate_document(raw_text, default_doc_type=doc_type)
+    fields = extraction_result["fields"]
+    flags = extraction_result["flags"]
+
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # Insert draft document into database (hidden from students)
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO documents (
+                title, doc_type, category, department, publish_date, expiry_date,
+                status, is_sample, source_type, original_filename, stored_path,
+                raw_text, summary, event_start, venue, registration_url,
+                ai_extraction, ai_flags, created_by, created_at
+            ) VALUES (?, ?, ?, ?, ?, ?, 'draft', 0, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            fields.get("title") or "Untitled Notice",
+            fields.get("doc_type") or (doc_type or "notice"),
+            fields.get("category") or "General",
+            fields.get("department"),
+            fields.get("publish_date") or date.today().isoformat(),
+            fields.get("expiry_date"),
+            source_type,
+            original_filename,
+            stored_path,
+            raw_text,
+            fields.get("summary"),
+            fields.get("event", {}).get("start"),
+            fields.get("event", {}).get("venue"),
+            fields.get("event", {}).get("registration_url"),
+            json.dumps(fields),
+            json.dumps(flags),
+            user["id"],
+            now_str,
+        ))
+        draft_id = cursor.lastrowid
+        conn.commit()
+
+    return {
+        "ok": True,
+        "draft_id": draft_id,
+        "fields": fields,
+        "flags": flags,
+        "provider": extraction_result.get("provider"),
+        "model": extraction_result.get("model"),
+    }
+
+
+@router.get("/documents")
+async def list_documents(
+    status: Optional[str] = None,
+    category: Optional[str] = None,
+    doc_type: Optional[str] = None,
+    q: Optional[str] = None,
+    user: Dict[str, Any] = Depends(require_role("admin")),
+):
+    """Retrieve list of documents for administration."""
+    query = "SELECT * FROM documents WHERE 1=1"
+    params = []
+
+    if status:
+        query += " AND status = ?"
+        params.append(status)
+    if category:
+        query += " AND category = ?"
+        params.append(category)
+    if doc_type:
+        query += " AND doc_type = ?"
+        params.append(doc_type)
+    if q:
+        query += " AND (title LIKE ? OR raw_text LIKE ?)"
+        params.extend([f"%{q}%", f"%{q}%"])
+
+    query += " ORDER BY id DESC"
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        rows = cursor.execute(query, params).fetchall()
+
+    results = []
+    for r in rows:
+        d = dict(r)
+        d["ai_flags"] = json.loads(d["ai_flags"]) if d.get("ai_flags") else []
+        d["ai_extraction"] = json.loads(d["ai_extraction"]) if d.get("ai_extraction") else {}
+        results.append(d)
+
+    return {"documents": results, "count": len(results)}
+
+
+@router.get("/documents/{document_id}")
+async def get_document(
+    document_id: int,
+    user: Dict[str, Any] = Depends(require_role("admin")),
+):
+    """Retrieve single document details with its deadlines and flags."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        doc = cursor.execute("SELECT * FROM documents WHERE id = ?", (document_id,)).fetchone()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found.")
+
+        deadlines = cursor.execute(
+            "SELECT * FROM deadlines WHERE document_id = ?",
+            (document_id,)
+        ).fetchall()
+
+    doc_dict = dict(doc)
+    doc_dict["ai_flags"] = json.loads(doc_dict["ai_flags"]) if doc_dict.get("ai_flags") else []
+    doc_dict["ai_extraction"] = json.loads(doc_dict["ai_extraction"]) if doc_dict.get("ai_extraction") else {}
+    doc_dict["deadlines"] = [dict(dl) for dl in deadlines]
+
+    return {"document": doc_dict}
+
+
+@router.put("/documents/{document_id}")
+async def update_document(
+    document_id: int,
+    payload: DocumentUpdateRequest,
+    user: Dict[str, Any] = Depends(require_role("admin")),
+):
+    """Update document fields during review or for published documents."""
+    data = payload.model_dump(exclude_unset=True)
+    deadlines = data.pop("deadlines", None)
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        exists = cursor.execute("SELECT id FROM documents WHERE id = ?", (document_id,)).fetchone()
+        if not exists:
+            raise HTTPException(status_code=404, detail="Document not found.")
+
+        if data:
+            set_clauses = [f"{col} = ?" for col in data.keys()]
+            cursor.execute(
+                f"UPDATE documents SET {', '.join(set_clauses)} WHERE id = ?",
+                list(data.values()) + [document_id]
+            )
+
+        # Update deadlines if provided
+        if deadlines is not None:
+            cursor.execute("DELETE FROM deadlines WHERE document_id = ?", (document_id,))
+            for dl in deadlines:
+                cursor.execute("""
+                    INSERT INTO deadlines (document_id, label, due_date, due_time, status)
+                    VALUES (?, ?, ?, ?, 'suggested')
+                """, (document_id, dl["label"], dl["date"], dl.get("time")))
+
+        conn.commit()
+
+    return {"ok": True, "message": "Document updated successfully."}
+
+
+@router.post("/documents/{document_id}/recheck")
+async def recheck_document(
+    document_id: int,
+    user: Dict[str, Any] = Depends(require_role("admin")),
+):
+    """
+    Recheck Loop: Re-runs deterministic validation checks over updated document text & metadata.
+    Updates the stored ai_flags.
+    """
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        doc = cursor.execute("SELECT * FROM documents WHERE id = ?", (document_id,)).fetchone()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found.")
+
+        deadlines = cursor.execute(
+            "SELECT label, due_date, due_time FROM deadlines WHERE document_id = ?",
+            (document_id,)
+        ).fetchall()
+
+    fields = {
+        "title": doc["title"],
+        "category": doc["category"],
+        "department": doc["department"],
+        "doc_type": doc["doc_type"],
+        "publish_date": doc["publish_date"],
+        "expiry_date": doc["expiry_date"],
+        "deadlines": [{"label": dl["label"], "date": dl["due_date"], "time": dl["due_time"]} for dl in deadlines],
+        "event": {"start": doc["event_start"], "venue": doc["venue"]},
+    }
+
+    flags = run_deterministic_validators(fields, doc["raw_text"])
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE documents SET ai_flags = ? WHERE id = ?",
+            (json.dumps(flags), document_id)
+        )
+        conn.commit()
+
+    return {"ok": True, "flags": flags, "blocking_count": sum(1 for f in flags if f.get("severity") == "blocking")}
+
+
+@router.post("/documents/{document_id}/publish")
+async def publish_document(
+    document_id: int,
+    payload: PublishRequest,
+    user: Dict[str, Any] = Depends(require_role("admin")),
+):
+    """
+    Publish Document:
+    Enforces that the admin confirmed all details and that NO blocking flags exist.
+    Indexes chunks in FTS5 and schedules reminders for all confirmed deadlines.
+    """
+    if not payload.confirmed:
+        raise HTTPException(
+            status_code=400,
+            detail="You must confirm the dates, category, and department before publishing."
+        )
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        doc = cursor.execute("SELECT * FROM documents WHERE id = ?", (document_id,)).fetchone()
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found.")
+
+        flags = json.loads(doc["ai_flags"]) if doc["ai_flags"] else []
+        blocking_flags = [f for f in flags if f.get("severity") == "blocking"]
+        if blocking_flags:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot publish document with blocking validation flags: {blocking_flags[0]['message']}"
+            )
+
+        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Update document status to published
+        cursor.execute(
+            "UPDATE documents SET status = 'published', published_at = ? WHERE id = ?",
+            (now_str, document_id)
+        )
+
+        # Mark deadlines as confirmed and schedule reminders
+        deadlines = cursor.execute(
+            "SELECT id, due_date FROM deadlines WHERE document_id = ?",
+            (document_id,)
+        ).fetchall()
+
+        cursor.execute("UPDATE deadlines SET status = 'confirmed' WHERE document_id = ?", (document_id,))
+
+        for dl in deadlines:
+            dl_id = dl["id"]
+            due_str = dl["due_date"]
+            try:
+                due_dt = datetime.strptime(due_str, "%Y-%m-%d")
+                # 2 days prior and 1 day prior at 09:00
+                remind_2d = (due_dt - timedelta(days=2)).strftime("%Y-%m-%d 09:00:00")
+                remind_1d = (due_dt - timedelta(days=1)).strftime("%Y-%m-%d 09:00:00")
+
+                # If due within 2 days, set reminder time to past so notification fires immediately
+                if due_dt.date() - date.today() <= timedelta(days=2):
+                    remind_2d = (datetime.now() - timedelta(minutes=5)).strftime("%Y-%m-%d %H:%M:%S")
+
+                cursor.execute("""
+                    INSERT INTO reminders (deadline_id, remind_at, kind)
+                    VALUES (?, ?, '2d'), (?, ?, '1d')
+                """, (dl_id, remind_2d, dl_id, remind_1d))
+            except Exception:
+                continue
+
+        conn.commit()
+
+    # Index chunks in FTS5 for search
+    indexed_chunks = index_document(document_id)
+
+    return {
+        "ok": True,
+        "message": f"Published '{doc['title']}' successfully to student feed.",
+        "indexed_chunks": indexed_chunks,
+        "deadlines_confirmed": len(deadlines),
+    }
+
+
+@router.post("/documents/{document_id}/unpublish")
+async def unpublish_document(
+    document_id: int,
+    user: Dict[str, Any] = Depends(require_role("admin")),
+):
+    """Unpublish a document: removes it from student feed and FTS5 search index."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE documents SET status = 'unpublished' WHERE id = ?", (document_id,))
+        conn.commit()
+
+    remove_document_index(document_id)
+    return {"ok": True, "message": "Document unpublished and removed from student search index."}
+
+
+@router.delete("/documents/{document_id}")
+async def delete_document(
+    document_id: int,
+    user: Dict[str, Any] = Depends(require_role("admin")),
+):
+    """Delete a document and clean up chunks, FTS index, and deadlines."""
+    remove_document_index(document_id)
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM documents WHERE id = ?", (document_id,))
+        conn.commit()
+
+    return {"ok": True, "message": "Document deleted successfully."}
