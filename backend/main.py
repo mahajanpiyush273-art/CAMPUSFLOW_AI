@@ -12,7 +12,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from backend.config import BASE_DIR, SECRET_KEY
 from backend.database import init_db
-from backend.routers import auth
+from backend.routers import admin, auth
 from backend.security import get_current_user_optional
 from backend.seed import seed_database
 
@@ -41,6 +41,7 @@ if STATIC_DIR.exists():
 
 # 5. Include Routers
 app.include_router(auth.router)
+app.include_router(admin.router)
 
 
 # 6. Protected HTML Shell Endpoints
