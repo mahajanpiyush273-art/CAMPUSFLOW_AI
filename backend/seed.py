@@ -609,11 +609,13 @@ def seed_database(force: bool = False) -> None:
 
             # Chunk document and index in FTS if published
             chunks = chunk_text(doc["raw_text"])
+            chunk_ids = []
             for idx, (heading, text_part) in enumerate(chunks):
                 cursor.execute("""
                     INSERT INTO chunks (document_id, chunk_index, heading, text)
                     VALUES (?, ?, ?, ?)
                 """, (doc_id, idx, heading, text_part))
+                chunk_ids.append(cursor.lastrowid)
 
             if doc["status"] == "published":
                 # Add to FTS
@@ -621,7 +623,7 @@ def seed_database(force: bool = False) -> None:
                     cursor.execute("""
                         INSERT INTO chunks_fts (title, heading, text, chunk_id, document_id)
                         VALUES (?, ?, ?, ?, ?)
-                    """, (doc["title"], heading, text_part, str(idx), str(doc_id)))
+                    """, (doc["title"], heading, text_part, str(chunk_ids[idx]), str(doc_id)))
 
                 # Add deadline and reminders if configured
                 dl_info = doc.get("deadline")

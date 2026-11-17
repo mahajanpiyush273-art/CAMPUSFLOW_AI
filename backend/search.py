@@ -1,80 +1,279 @@
+"""
+CampusFlow AI - Semantic Search & Verification Confidence Scoring Engine
+Combines SQLite FTS5 BM25 retrieval, campus synonym expansion,
+Hinglish keyword translation, expired notice penalties, and grounded confidence scoring.
+"""
+
+from datetime import date, datetime
+import math
 import re
 from typing import Any, Dict, List, Optional, Set, Tuple
 
-# Common stop words to ignore when searching
+from backend.config import CONFIDENCE_HIGH, CONFIDENCE_MEDIUM, VERIFIED_MIN_CONFIDENCE
+from backend.database import get_connection
+from backend.ingest import is_document_expired
+
+# Standard English stop words
 STOP_WORDS: Set[str] = {
-    "a", "about", "all", "am", "an", "and", "any", "are", "as", "at",
-    "be", "because", "been", "but", "by", "can", "could", "did", "do",
-    "does", "for", "from", "had", "has", "have", "he", "her", "here",
-    "him", "his", "how", "i", "if", "in", "into", "is", "it", "its",
-    "me", "my", "no", "not", "of", "on", "or", "our", "out", "she",
-    "should", "so", "some", "tell", "than", "that", "the", "their",
-    "them", "then", "there", "these", "they", "this", "to", "was",
-    "we", "were", "what", "when", "where", "which", "who", "whom",
-    "why", "will", "with", "would", "you", "your", "give", "please"
+    "a", "about", "above", "after", "again", "against", "all", "am", "an", "and", "any", "are",
+    "as", "at", "be", "because", "been", "before", "being", "below", "between", "both", "but",
+    "by", "could", "did", "do", "does", "doing", "down", "during", "each", "few", "for", "from",
+    "further", "had", "has", "have", "having", "he", "her", "here", "hers", "herself", "him",
+    "himself", "his", "how", "i", "if", "in", "into", "is", "it", "its", "itself", "me", "more",
+    "most", "my", "myself", "no", "nor", "not", "of", "off", "on", "once", "only", "or", "other",
+    "ought", "our", "ours", "ourselves", "out", "over", "own", "same", "she", "should", "so",
+    "some", "such", "than", "that", "the", "their", "theirs", "them", "themselves", "then",
+    "there", "these", "they", "this", "those", "through", "to", "too", "under", "until", "up",
+    "very", "was", "we", "were", "what", "when", "where", "which", "while", "who", "whom", "why",
+    "with", "would", "you", "your", "yours", "yourself", "yourselves", "tell", "give", "please",
+    "want", "know", "can"
+}
+
+# Campus domain synonym mappings
+SYNONYM_GROUPS: List[Set[str]] = [
+    {"deadline", "last date", "due date", "submit by", "submission", "closes on", "kab tak"},
+    {"fee", "fees", "payment", "fine", "waiver", "challan", "receipt", "jama", "jama karna", "cost"},
+    {"form", "application", "request", "registration", "apply"},
+    {"hostel", "room", "warden", "curfew", "mess", "accommodation", "room change"},
+    {"exam", "exams", "examination", "mid-term", "midterm", "final", "test", "timetable", "schedule"},
+    {"ppt", "presentation", "slides", "project", "final year"},
+    {"certificate", "bonafide", "study certificate", "proof"},
+    {"event", "workshop", "session", "orientation", "fest", "club"},
+    {"attendance", "minimum attendance", "medical leave", "conduct", "rules"},
+    {"curfew", "timings", "gate timing", "10:00 pm", "late entry"},
+    {"working day", "teaching day", "timetable", "classes", "saturday"},
+    {"volunteer", "volunteering", "cultural fest"},
+]
+
+# Common Hinglish conversational words to English campus terms
+HINGLISH_MAP: Dict[str, str] = {
+    "kab": "when",
+    "kahan": "where",
+    "kaha": "where",
+    "kitna": "how much",
+    "kitne": "how many",
+    "kaise": "how",
+    "kya": "what",
+    "tak": "until deadline",
+    "jama": "pay submit",
+    "karni": "",
+    "karna": "",
+    "hai": "",
+    "ho": "",
+    "raha": "",
+    "rahi": "",
+    "chahiye": "need require",
+    "dena": "give submit",
+    "milega": "get receive",
+    "milta": "get receive",
+    "batao": "tell",
 }
 
 
 def clean_and_tokenize(text: str) -> List[str]:
-    """Lowercase text and extract meaningful alphanumeric words."""
-    words = re.findall(r"\b[a-zA-Z0-9]+\b", text.lower())
+    """Extract alphanumeric words from query, excluding standard stop words."""
+    words = re.findall(r"\b[a-zA-Z0-9_-]+\b", text.lower())
     return [w for w in words if w not in STOP_WORDS and len(w) > 1]
 
 
-def find_best_notice(
+def expand_query_with_synonyms(keywords: List[str]) -> List[str]:
+    """Expand keywords with campus synonym groups and Hinglish translations."""
+    expanded: Set[str] = set(keywords)
+
+    # 1. Check Hinglish mappings
+    for kw in keywords:
+        if kw in HINGLISH_MAP:
+            translated = HINGLISH_MAP[kw].split()
+            expanded.update(t for t in translated if t and t not in STOP_WORDS)
+
+    # 2. Check campus domain synonym groups
+    for group in SYNONYM_GROUPS:
+        # Check if any keyword matches a group item
+        if any(kw in group or any(kw in item for item in group) for kw in keywords):
+            # Add all primary single-word synonyms from this group
+            for syn in group:
+                for token in syn.split():
+                    if token not in STOP_WORDS and len(token) > 2:
+                        expanded.add(token)
+
+    return list(expanded)
+
+
+def search_fts5_chunks(
+    query_text: str,
+    limit: int = 6,
+) -> List[Dict[str, Any]]:
+    """
+    Query the SQLite FTS5 virtual table for published document chunks matching the query.
+    Returns matched chunks with document metadata and BM25 rank score.
+    """
+    raw_keywords = clean_and_tokenize(query_text)
+    if not raw_keywords:
+        return []
+
+    expanded_keywords = expand_query_with_synonyms(raw_keywords)
+    if not expanded_keywords:
+        expanded_keywords = raw_keywords
+
+    # Format query for FTS5 (use OR between terms to allow flexible partial matches)
+    safe_terms = [re.sub(r"[^\w]", "", kw) for kw in expanded_keywords if len(kw) > 1]
+    safe_terms = [t for t in safe_terms if t]
+    if not safe_terms:
+        return []
+
+    # Construct FTS query string: term1 OR term2 OR ...
+    fts_match_query = " OR ".join(safe_terms)
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        # Query chunks_fts joined with documents and chunks tables
+        # rank is FTS5's built-in BM25 score (more negative is better match)
+        sql = """
+            SELECT
+                fts.chunk_id,
+                CAST(fts.document_id AS INTEGER) AS document_id,
+                fts.heading,
+                fts.text AS chunk_text,
+                d.title AS doc_title,
+                d.doc_type,
+                d.category,
+                d.department,
+                d.publish_date,
+                d.expiry_date,
+                d.office_id,
+                d.related_form_id,
+                d.status,
+                d.is_sample,
+                d.raw_text AS full_doc_text,
+                fts.rank AS bm25_score
+            FROM chunks_fts fts
+            JOIN documents d ON d.id = CAST(fts.document_id AS INTEGER)
+            WHERE chunks_fts MATCH ? AND d.status = 'published'
+            ORDER BY fts.rank ASC
+            LIMIT ?;
+        """
+        try:
+            rows = cursor.execute(sql, (fts_match_query, limit * 2)).fetchall()
+        except Exception:
+            # Fallback to simple title/text LIKE if FTS expression has syntax quirks
+            sql_fallback = """
+                SELECT
+                    c.id AS chunk_id,
+                    c.document_id,
+                    c.heading,
+                    c.text AS chunk_text,
+                    d.title AS doc_title,
+                    d.doc_type,
+                    d.category,
+                    d.department,
+                    d.publish_date,
+                    d.expiry_date,
+                    d.office_id,
+                    d.related_form_id,
+                    d.status,
+                    d.is_sample,
+                    d.raw_text AS full_doc_text,
+                    -10.0 AS bm25_score
+                FROM chunks c
+                JOIN documents d ON d.id = c.document_id
+                WHERE d.status = 'published' AND (
+                    d.title LIKE ? OR c.text LIKE ?
+                )
+                LIMIT ?;
+            """
+            first_kw = safe_terms[0] if safe_terms else query_text
+            rows = cursor.execute(sql_fallback, (f"%{first_kw}%", f"%{first_kw}%", limit)).fetchall()
+
+    results: List[Dict[str, Any]] = []
+    seen_chunks: Set[int] = set()
+
+    for r in rows:
+        cid = r["chunk_id"]
+        if cid in seen_chunks:
+            continue
+        seen_chunks.add(cid)
+
+        item = dict(r)
+        item["old"] = is_document_expired(item.get("expiry_date"))
+        results.append(item)
+
+    # Rank matches by BM25 score with a mild penalty for expired (OLD) documents
+    for item in results:
+        base_rank = float(item.get("bm25_score", 0.0))
+        if item.get("old"):
+            # A negative BM25 score multiplied by 0.6 weakens the score while preserving relevance
+            item["adjusted_rank"] = base_rank * 0.6 if base_rank < 0 else base_rank * 1.4
+        else:
+            item["adjusted_rank"] = base_rank
+
+    results.sort(key=lambda x: x["adjusted_rank"])
+    return results[:limit]
+
+
+def compute_confidence_score(
     question: str,
-    notices: List[Dict[str, Any]],
-) -> Tuple[Optional[Dict[str, Any]], int]:
+    top_chunk: Dict[str, Any],
+    llm_answered_ok: bool,
+    is_offline: bool = False,
+) -> Tuple[int, str]:
     """
-    Search approved notices for the best match to a student's question.
-
-    Returns:
-        (best_notice, confidence_score)
-        If confidence < 30 or no notices match, returns (None, confidence_score).
+    Compute confidence score (0-100) and confidence tier level.
+    Formula (Section 8.4):
+    coverage   = fraction of question keywords found in best chunk + title (0-1)
+    bm25_norm  = squashed BM25 score (0-1)
+    title_hit  = 1 if keyword in title, else 0
+    llm_ok     = 1 if LLM answered from text, 0 if it could not, 0.5 in offline mode
+    confidence = round(100 * (0.45*coverage + 0.30*bm25_norm + 0.10*title_hit + 0.15*llm_ok))
+    minus 15 if expired (OLD)
     """
-    if not notices:
-        return None, 0
+    raw_keywords = clean_and_tokenize(question)
+    expanded = expand_query_with_synonyms(raw_keywords) or raw_keywords
 
-    keywords = clean_and_tokenize(question)
-    if not keywords:
-        return None, 0
+    chunk_content = f"{top_chunk.get('doc_title', '')} {top_chunk.get('heading', '')} {top_chunk.get('chunk_text', '')}".lower()
+    title_lower = str(top_chunk.get("doc_title", "")).lower()
 
-    total_keywords = len(keywords)
-    best_notice: Optional[Dict[str, Any]] = None
-    highest_score = 0.0
+    # 1. Coverage
+    matched_kws = sum(1 for kw in raw_keywords if kw in chunk_content)
+    # Also check if any synonym matches
+    if not matched_kws and expanded:
+        matched_kws = sum(1 for kw in expanded if kw in chunk_content)
 
-    for notice in notices:
-        title_text = notice.get("title", "").lower()
-        category_text = notice.get("category", "").lower()
-        body_text = notice.get("text", "").lower()
-        full_content = f"{title_text} {category_text} {body_text}"
+    total_kws = max(len(raw_keywords), 1)
+    coverage = min(1.0, matched_kws / total_kws)
 
-        matched_count = 0
-        title_matches = 0
+    # 2. BM25 Norm
+    # FTS5 rank is negative (e.g., -1.5 to -30). Squash using tanh or log
+    raw_bm25 = abs(float(top_chunk.get("bm25_score", -5.0)))
+    bm25_norm = min(1.0, math.tanh(raw_bm25 / 10.0))
 
-        for kw in keywords:
-            if kw in full_content:
-                matched_count += 1
-            if kw in title_text:
-                title_matches += 1
+    # 3. Title Hit
+    title_hit = 1.0 if any(kw in title_lower for kw in raw_keywords) else 0.0
 
-        if matched_count > 0:
-            # Score based on keyword coverage with bonus weight for title matches
-            match_ratio = matched_count / total_keywords
-            title_bonus = min(0.3, (title_matches / total_keywords) * 0.3)
-            raw_score = (match_ratio * 0.7) + title_bonus
+    # 4. LLM OK weight
+    if is_offline:
+        llm_val = 0.5 if coverage >= 0.5 else 0.2
+    else:
+        llm_val = 1.0 if llm_answered_ok else 0.0
 
-            # Scale to 0-100 percentage
-            score = min(100.0, raw_score * 100.0)
+    # Calculate raw score
+    raw_score = (0.45 * coverage) + (0.30 * bm25_norm) + (0.10 * title_hit) + (0.15 * llm_val)
+    score = int(round(100.0 * raw_score))
 
-            if score > highest_score:
-                highest_score = score
-                best_notice = notice
+    # Penalty for expired notice
+    if top_chunk.get("old"):
+        score = max(0, score - 15)
 
-    confidence = int(round(highest_score))
+    # Clamp between 0 and 100
+    score = max(0, min(100, score))
 
-    # Hackathon threshold: Confidence must be at least 30% to verify
-    if confidence >= 30 and best_notice is not None:
-        return best_notice, confidence
+    # Determine confidence level
+    if score >= CONFIDENCE_HIGH:
+        level = "High"
+    elif score >= CONFIDENCE_MEDIUM:
+        level = "Medium"
+    elif score >= VERIFIED_MIN_CONFIDENCE:
+        level = "Low"
+    else:
+        level = "Not verified"
 
-    return None, confidence
+    return score, level
