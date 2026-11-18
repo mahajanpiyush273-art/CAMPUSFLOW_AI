@@ -157,6 +157,22 @@ export function showModal({ title, content, confirmText = "Confirm", cancelText 
     cancelBtn.addEventListener("click", close);
 }
 
+// Global modal close function
+export function hideModal() {
+    const overlay = document.getElementById("app-modal-overlay");
+    if (overlay) {
+        overlay.classList.remove("open");
+    }
+}
+window.CF_HIDE_MODAL = hideModal;
+
+// Close modals on Escape key
+window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+        hideModal();
+    }
+});
+
 // 5. Skeleton Loaders
 export function renderSkeleton(lines = 3, height = 24) {
     const wrapper = document.createElement("div");
