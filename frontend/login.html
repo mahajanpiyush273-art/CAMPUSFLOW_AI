@@ -144,16 +144,13 @@
             }
         });
 
-        // Parse query parameter ?role=student or ?role=admin
+        // Parse query parameter ?role=student or ?role=admin (defaults to student)
         const urlParams = new URLSearchParams(window.location.search);
         const queryRole = urlParams.get("role");
         if (queryRole === "admin") {
             applyRole("admin");
-        } else if (queryRole === "student") {
-            applyRole("student");
         } else {
-            // If no role is selected in URL, redirect to home screen where user chooses their portal
-            window.location.href = "/";
+            applyRole("student");
         }
     </script>
 </body>
