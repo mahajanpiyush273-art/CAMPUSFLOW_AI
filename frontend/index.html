@@ -8,37 +8,35 @@
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/components.css">
     <style>
-        /* Modern subtle grid background pattern */
         body {
-            background-color: #FAFAFC;
-            background-image: 
-                radial-gradient(rgba(197, 54, 120, 0.08) 1.5px, transparent 1.5px),
-                radial-gradient(rgba(255, 88, 65, 0.05) 1.5px, transparent 1.5px);
-            background-size: 32px 32px;
-            background-position: 0 0, 16px 16px;
+            background-color: #FFF5F8;
             position: relative;
+            min-height: 100vh;
         }
 
-        .ambient-middle {
+        /* Custom high-res vibrant wave background */
+        .home-bg-layer {
             position: fixed;
-            width: 380px;
-            height: 380px;
-            border-radius: 50%;
-            pointer-events: none;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-image: 
+                linear-gradient(to bottom, rgba(255, 255, 255, 0.25), rgba(255, 255, 255, 0.45)),
+                url('/static/images/home-bg.jpg');
+            background-size: cover;
+            background-position: center top;
+            background-repeat: no-repeat;
             z-index: 0;
-            filter: blur(100px);
-            background-color: rgba(255, 88, 65, 0.09);
-            top: 25%;
-            left: 50%;
-            transform: translateX(-50%);
+            pointer-events: none;
         }
 
         .hero-card-wrapper {
-            background: rgba(255, 255, 255, 0.78);
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px);
-            border: 1px solid rgba(255, 255, 255, 0.9);
-            box-shadow: 0 10px 30px rgba(197, 54, 120, 0.07), 0 2px 6px rgba(0, 0, 0, 0.03);
+            background: rgba(255, 255, 255, 0.84);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.95);
+            box-shadow: 0 12px 36px rgba(197, 54, 120, 0.10), 0 2px 8px rgba(0, 0, 0, 0.04);
             border-radius: 20px;
             padding: 24px 28px;
             text-align: center;
@@ -76,9 +74,7 @@
     </style>
 </head>
 <body>
-    <div class="ambient-circle ambient-orange"></div>
-    <div class="ambient-circle ambient-violet"></div>
-    <div class="ambient-middle"></div>
+    <div class="home-bg-layer"></div>
 
     <header class="top-bar">
         <div class="top-bar-inner">
