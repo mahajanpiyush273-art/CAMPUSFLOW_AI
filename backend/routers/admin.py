@@ -152,8 +152,23 @@ async def upload_document(
 
     return {
         "ok": True,
+        "id": draft_id,
+        "document_id": draft_id,
         "draft_id": draft_id,
-        "fields": fields,
+        "status": "draft",
+        "title": fields.get("title") or "Untitled Notice",
+        "doc_type": fields.get("doc_type") or (doc_type or "Notice"),
+        "category": fields.get("category") or "Other",
+        "department": fields.get("department") or "",
+        "office_id": fields.get("office_id"),
+        "publish_date": fields.get("publish_date") or date.today().isoformat(),
+        "expiry_date": fields.get("expiry_date"),
+        "raw_text": raw_text,
+        "summary": fields.get("summary") or "",
+        "event_start": fields.get("event", {}).get("start"),
+        "venue": fields.get("event", {}).get("venue"),
+        "registration_url": fields.get("event", {}).get("registration_url"),
+        "deadlines": fields.get("deadlines") or [],
         "flags": flags,
         "provider": extraction_result.get("provider"),
         "model": extraction_result.get("model"),
@@ -260,7 +275,15 @@ async def update_document(
 
         conn.commit()
 
-    return {"ok": True, "message": "Document updated successfully."}
+        # Fetch updated doc and deadlines
+        updated_doc = cursor.execute("SELECT * FROM documents WHERE id = ?", (document_id,)).fetchone()
+        updated_deadlines = cursor.execute("SELECT * FROM deadlines WHERE document_id = ?", (document_id,)).fetchall()
+
+    doc_dict = dict(updated_doc)
+    doc_dict["flags"] = json.loads(doc_dict["ai_flags"]) if doc_dict.get("ai_flags") else []
+    doc_dict["deadlines"] = [{"label": dl["label"], "date": dl["due_date"], "time": dl["due_time"]} for dl in updated_deadlines]
+
+    return {"ok": True, "message": "Document updated successfully.", "document": doc_dict}
 
 
 @router.post("/documents/{document_id}/recheck")
@@ -381,8 +404,11 @@ async def publish_document(
 
     return {
         "ok": True,
+        "status": "published",
         "message": f"Published '{doc['title']}' successfully to student feed.",
+        "chunk_count": indexed_chunks,
         "indexed_chunks": indexed_chunks,
+        "scheduled_reminders": len(deadlines) * 2,
         "deadlines_confirmed": len(deadlines),
     }
 
