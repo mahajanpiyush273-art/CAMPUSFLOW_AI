@@ -18,50 +18,22 @@
                 <a href="/" class="brand-name">CampusFlow AI</a>
                 <span class="brand-tagline">Ask. Verify. Act.</span>
             </div>
-            <a href="/" class="btn btn-secondary btn-sm" style="background: rgba(255,255,255,0.2); color: #fff; border: none;">← Back to Home</a>
+            <a href="/" class="btn btn-secondary btn-sm" style="background: rgba(255,255,255,0.2); color: #fff; border: none; padding: 6px 14px; text-decoration: none;">← Back to Home</a>
         </div>
     </header>
 
     <main class="page-container" style="flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 16px;">
         <div style="max-width: 440px; width: 100%;">
-            
-            <!-- Step 1: Role Chooser View -->
-            <div id="role-chooser-view" class="card" style="display: none;">
-                <h2 style="text-align: center; margin-bottom: 8px;">Welcome to CampusFlow</h2>
-                <p class="text-muted" style="text-align: center; margin-bottom: 24px;">Please select your role to proceed to sign in.</p>
 
-                <div style="display: flex; flex-direction: column; gap: 14px;">
-                    <div class="card student-card" style="cursor: pointer; padding: 18px;" onclick="selectRole('student')">
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div>
-                                <h3 style="font-size: 17px; margin-bottom: 2px;">Student Portal</h3>
-                                <p class="text-muted" style="font-size: 13px;">Ask questions, track deadlines, submit forms</p>
-                            </div>
-                            <span style="font-size: 24px;">🎓</span>
-                        </div>
-                    </div>
-
-                    <div class="card admin-card" style="cursor: pointer; padding: 18px;" onclick="selectRole('admin')">
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div>
-                                <h3 style="font-size: 17px; margin-bottom: 2px;">Admin Portal</h3>
-                                <p class="text-muted" style="font-size: 13px;">Upload notices, validate dates, manage reviews</p>
-                            </div>
-                            <span style="font-size: 24px;">🏛️</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Step 2: Sign-In Form View -->
-            <div id="login-form-view" class="card" style="display: none;">
+            <!-- Sign-In Form View -->
+            <div id="login-form-view" class="card student-card">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
-                    <span id="role-badge" class="badge"></span>
-                    <button class="btn btn-secondary btn-sm" onclick="showRoleChooser()" style="padding: 4px 8px; font-size: 12px;">Change Role</button>
+                    <span id="role-badge" class="badge badge-category">Student Access</span>
+                    <a href="/" class="btn btn-secondary btn-sm" style="padding: 4px 10px; font-size: 12px; text-decoration: none;" title="Return to home screen to switch role">Change Role</a>
                 </div>
 
-                <h2 id="login-title" style="margin-bottom: 6px;">Sign in</h2>
-                <p id="login-subtitle" class="text-muted" style="margin-bottom: 20px; font-size: 14px;"></p>
+                <h2 id="login-title" style="margin-bottom: 6px;">Student Sign In</h2>
+                <p id="login-subtitle" class="text-muted" style="margin-bottom: 20px; font-size: 14px;">Sign in to ask questions, view alerts, and track forms.</p>
 
                 <div id="login-error" class="card" style="display: none; background: var(--danger-bg); border: 1px solid var(--danger-border); color: var(--danger); padding: 12px; margin-bottom: 16px; font-size: 13.5px;"></div>
 
@@ -79,7 +51,7 @@
                         </div>
                     </div>
 
-                    <button type="submit" id="submit-btn" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 15px; margin-top: 8px;">
+                    <button type="submit" id="submit-btn" class="btn btn-accent" style="width: 100%; padding: 12px; font-size: 15px; margin-top: 8px;">
                         Sign In
                     </button>
                 </form>
@@ -105,26 +77,15 @@
 
         let selectedRole = "student";
 
-        window.selectRole = function(role) {
+        function applyRole(role) {
             selectedRole = role;
             const roleCard = document.getElementById("login-form-view");
-            const chooser = document.getElementById("role-chooser-view");
             const badge = document.getElementById("role-badge");
             const title = document.getElementById("login-title");
             const subtitle = document.getElementById("login-subtitle");
             const submitBtn = document.getElementById("submit-btn");
 
-            chooser.style.display = "none";
-            roleCard.style.display = "block";
-
-            if (role === "student") {
-                roleCard.className = "card student-card";
-                badge.className = "badge badge-category";
-                badge.textContent = "Student Access";
-                title.textContent = "Student Sign In";
-                subtitle.textContent = "Sign in to ask questions, view alerts, and track forms.";
-                submitBtn.className = "btn btn-accent";
-            } else {
+            if (role === "admin") {
                 roleCard.className = "card admin-card";
                 badge.className = "badge";
                 badge.style.backgroundColor = "var(--brand-tint)";
@@ -133,14 +94,17 @@
                 title.textContent = "Admin Portal Sign In";
                 subtitle.textContent = "Sign in to publish notices, manage reviews, and view analytics.";
                 submitBtn.className = "btn btn-primary";
+            } else {
+                roleCard.className = "card student-card";
+                badge.className = "badge badge-category";
+                badge.style.backgroundColor = "";
+                badge.style.color = "";
+                badge.textContent = "Student Access";
+                title.textContent = "Student Sign In";
+                subtitle.textContent = "Sign in to ask questions, view alerts, and track forms.";
+                submitBtn.className = "btn btn-accent";
             }
-        };
-
-        window.showRoleChooser = function() {
-            document.getElementById("role-chooser-view").style.display = "block";
-            document.getElementById("login-form-view").style.display = "none";
-            document.getElementById("login-error").style.display = "none";
-        };
+        }
 
         // Show/hide password toggle
         const pwInput = document.getElementById("password");
@@ -192,13 +156,16 @@
             }
         });
 
-        // Auto-select role based on query param ?role=student or ?role=admin
+        // Parse query parameter ?role=student or ?role=admin
         const urlParams = new URLSearchParams(window.location.search);
         const queryRole = urlParams.get("role");
-        if (queryRole === "student" || queryRole === "admin") {
-            selectRole(queryRole);
+        if (queryRole === "admin") {
+            applyRole("admin");
+        } else if (queryRole === "student") {
+            applyRole("student");
         } else {
-            showRoleChooser();
+            // If no role is selected in URL, redirect to home screen where user chooses their portal
+            window.location.href = "/";
         }
     </script>
 </body>
