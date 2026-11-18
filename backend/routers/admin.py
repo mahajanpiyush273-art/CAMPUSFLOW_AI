@@ -17,6 +17,8 @@ from backend.database import get_connection
 from backend.extraction import extract_and_validate_document, run_deterministic_validators
 from backend.ingest import extract_text_from_file, index_document, remove_document_index
 from backend.llm import get_provider_health
+from backend.reminders import notify_student_reply
+from backend.search import search_fts5_chunks
 from backend.security import require_role
 
 router = APIRouter(prefix="/api/admin", tags=["Admin"])
@@ -413,3 +415,197 @@ async def delete_document(
         conn.commit()
 
     return {"ok": True, "message": "Document deleted successfully."}
+
+
+class ReviewReplyRequest(BaseModel):
+    group_key: str
+    answer: str
+    category: Optional[str] = "General"
+    office_id: Optional[int] = None
+    related_form_id: Optional[int] = None
+
+
+@router.get("/review-queue")
+async def get_review_queue(user: Dict[str, Any] = Depends(require_role("admin"))):
+    """
+    Review Queue:
+    Groups unanswered student questions by group_key.
+    Returns grouped list with repetition count and matching notice suggestions.
+    """
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        groups = cursor.execute("""
+            SELECT group_key, COUNT(*) as count, MAX(created_at) as last_asked,
+                   MIN(text) as sample_question, COUNT(DISTINCT user_id) as students_count
+            FROM questions
+            WHERE status = 'not_verified'
+            GROUP BY group_key
+            ORDER BY count DESC, last_asked DESC
+        """).fetchall()
+
+    results = []
+    for g in groups:
+        sample_q = g["sample_question"]
+        suggested = search_fts5_chunks(sample_q, limit=2)
+        results.append({
+            "group_key": g["group_key"],
+            "count": g["count"],
+            "sample_question": sample_q,
+            "last_asked": g["last_asked"],
+            "students_count": g["students_count"],
+            "suggested_notices": [
+                {"id": s["document_id"], "title": s["doc_title"], "department": s.get("department")}
+                for s in suggested
+            ],
+        })
+
+    return {"queue": results, "total_pending": sum(g["count"] for g in results)}
+
+
+@router.post("/review-queue/reply")
+async def reply_review_queue(
+    payload: ReviewReplyRequest,
+    user: Dict[str, Any] = Depends(require_role("admin")),
+):
+    """
+    Publish Verified Answer Once for all students:
+    1. Creates a published FAQ document in documents table and indexes in FTS5.
+    2. Marks all questions with that group_key as admin_replied.
+    3. Dispatches individual notifications to all students who asked.
+    """
+    answer_text = payload.answer.strip()
+    if not answer_text:
+        raise HTTPException(status_code=400, detail="Answer text cannot be empty.")
+
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        # Find all questions in this group
+        pending_questions = cursor.execute("""
+            SELECT id, user_id, text FROM questions
+            WHERE group_key = ? AND status = 'not_verified'
+        """, (payload.group_key,)).fetchall()
+
+        if not pending_questions:
+            raise HTTPException(status_code=404, detail="No unverified questions found for this group key.")
+
+        sample_q = pending_questions[0]["text"]
+        faq_title = f"FAQ: {sample_q[:65]}"
+        raw_faq_text = f"Official FAQ: {sample_q}\n\nVerified Answer: {answer_text}"
+
+        # 1. Create published FAQ document
+        cursor.execute("""
+            INSERT INTO documents (
+                title, doc_type, category, office_id, publish_date, status,
+                is_sample, source_type, raw_text, summary, related_form_id,
+                created_by, created_at, published_at
+            ) VALUES (?, 'faq', ?, ?, ?, 'published', 0, 'admin_answer', ?, ?, ?, ?, ?, ?)
+        """, (
+            faq_title, payload.category or "General", payload.office_id,
+            date.today().isoformat(), raw_faq_text, answer_text[:200],
+            payload.related_form_id, user["id"], now_str, now_str
+        ))
+        faq_doc_id = cursor.lastrowid
+
+        # 2. Update questions status
+        cursor.execute("""
+            UPDATE questions
+            SET status = 'admin_replied', answer = ?, document_id = ?
+            WHERE group_key = ? AND status = 'not_verified'
+        """, (answer_text, faq_doc_id, payload.group_key))
+
+        conn.commit()
+
+    # Index FAQ document in FTS5
+    index_document(faq_doc_id)
+
+    # 3. Notify each student
+    for q in pending_questions:
+        notify_student_reply(
+            user_id=q["user_id"],
+            question_text=q["text"],
+            reply_text=answer_text,
+        )
+
+    return {
+        "ok": True,
+        "message": f"Verified answer published. Notified {len(pending_questions)} students.",
+        "students_notified": len(pending_questions),
+        "faq_document_id": faq_doc_id,
+    }
+
+
+@router.get("/stats")
+async def get_admin_insights(user: Dict[str, Any] = Depends(require_role("admin"))):
+    """
+    Insights Dashboard metrics:
+    - Questions answered vs not verified
+    - Common/repeated questions
+    - Topic breakdown
+    - Deadlines met percentage
+    """
+    with get_connection() as conn:
+        cursor = conn.cursor()
+
+        # Questions counts
+        total_q = cursor.execute("SELECT COUNT(*) FROM questions").fetchone()[0]
+        answered_q = cursor.execute("SELECT COUNT(*) FROM questions WHERE status = 'answered'").fetchone()[0]
+        not_verified_q = cursor.execute("SELECT COUNT(*) FROM questions WHERE status = 'not_verified'").fetchone()[0]
+        replied_q = cursor.execute("SELECT COUNT(*) FROM questions WHERE status = 'admin_replied'").fetchone()[0]
+
+        # Average confidence
+        avg_conf_row = cursor.execute("SELECT AVG(confidence) FROM questions WHERE status IN ('answered', 'admin_replied')").fetchone()[0]
+        avg_confidence = int(round(avg_conf_row or 0))
+
+        # Deadlines metrics
+        total_deadlines = cursor.execute("SELECT COUNT(*) FROM deadlines WHERE status = 'confirmed'").fetchone()[0]
+        total_done = cursor.execute("SELECT COUNT(*) FROM deadline_done").fetchone()[0]
+
+        # Category breakdown
+        category_rows = cursor.execute("""
+            SELECT topic, COUNT(*) as count FROM questions
+            WHERE topic IS NOT NULL GROUP BY topic ORDER BY count DESC LIMIT 6
+        """).fetchall()
+
+        # Top 5 most repeated questions
+        top_repeated = cursor.execute("""
+            SELECT group_key, MIN(text) as sample_question, COUNT(*) as count, status
+            FROM questions
+            GROUP BY group_key
+            ORDER BY count DESC LIMIT 5
+        """).fetchall()
+
+        # Questions per day (last 7 days)
+        daily_rows = cursor.execute("""
+            SELECT SUBSTR(created_at, 1, 10) as day, COUNT(*) as count
+            FROM questions
+            GROUP BY day
+            ORDER BY day DESC LIMIT 7
+        """).fetchall()
+
+        # Helpful rating
+        up_count = cursor.execute("SELECT COUNT(*) FROM questions WHERE helpful = 1").fetchone()[0]
+        down_count = cursor.execute("SELECT COUNT(*) FROM questions WHERE helpful = -1").fetchone()[0]
+        total_feedback = up_count + down_count
+        helpful_pct = int(round((up_count / total_feedback) * 100)) if total_feedback > 0 else 100
+
+    answered_pct = int(round((answered_q / total_q) * 100)) if total_q > 0 else 0
+    not_verified_pct = int(round((not_verified_q / total_q) * 100)) if total_q > 0 else 0
+
+    return {
+        "total_questions": total_q,
+        "answered_count": answered_q,
+        "answered_pct": answered_pct,
+        "not_verified_count": not_verified_q,
+        "not_verified_pct": not_verified_pct,
+        "replied_count": replied_q,
+        "pending_review_count": not_verified_q,
+        "avg_confidence": avg_confidence,
+        "active_deadlines": total_deadlines,
+        "deadlines_marked_done": total_done,
+        "helpful_pct": helpful_pct,
+        "categories": [{"topic": r["topic"], "count": r["count"]} for r in category_rows],
+        "top_repeated": [dict(r) for r in top_repeated],
+        "daily_questions": list(reversed([dict(r) for r in daily_rows])),
+    }

@@ -4,6 +4,8 @@ Coordinates authentication sessions, API routers, role-protected HTML shells,
 and static asset delivery.
 """
 
+import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
@@ -12,6 +14,7 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from backend.config import BASE_DIR, SECRET_KEY
 from backend.database import init_db
+from backend.reminders import run_reminder_worker
 from backend.routers import admin, auth, student
 from backend.security import get_current_user_optional
 from backend.seed import seed_database
@@ -20,8 +23,17 @@ from backend.seed import seed_database
 init_db()
 seed_database(force=False)
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Background tasks manager for reminder dispatching."""
+    worker_task = asyncio.create_task(run_reminder_worker())
+    yield
+    worker_task.cancel()
+
+
 # 2. Create FastAPI application
-app = FastAPI(title="CampusFlow AI - Ask. Verify. Act.")
+app = FastAPI(title="CampusFlow AI - Ask. Verify. Act.", lifespan=lifespan)
 
 # 3. Mount Session Middleware for signed cookie auth
 app.add_middleware(
