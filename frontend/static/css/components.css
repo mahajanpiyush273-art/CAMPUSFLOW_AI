@@ -1,0 +1,482 @@
+/* CampusFlow AI - Components Styles */
+
+/* 1. Top Bar */
+.top-bar {
+    width: 100%;
+    background-color: var(--brand);
+    color: #FFFFFF;
+    padding: 12px 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.top-bar-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.brand-group {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+}
+
+.brand-name {
+    font-size: 19px;
+    font-weight: 700;
+    color: #FFFFFF;
+    text-decoration: none;
+    letter-spacing: -0.01em;
+}
+
+.brand-tagline {
+    font-size: 12.5px;
+    color: rgba(255, 255, 255, 0.85);
+    font-weight: 400;
+}
+
+.top-bar-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+/* 2. Notification Bell & Dropdown */
+.notif-bell-btn {
+    position: relative;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    color: #FFFFFF;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    transition: var(--transition);
+}
+
+.notif-bell-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.notif-badge {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    background-color: var(--accent);
+    color: #FFFFFF;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    border: 2px solid var(--brand);
+}
+
+.notif-dropdown {
+    position: absolute;
+    top: 48px;
+    right: 0;
+    width: 340px;
+    background: var(--surface);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border);
+    padding: 12px;
+    display: none;
+    z-index: 200;
+}
+
+.notif-dropdown.open {
+    display: block;
+}
+
+.notif-item {
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    transition: var(--transition);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+}
+
+.notif-item:last-child {
+    border-bottom: none;
+}
+
+.notif-item:hover {
+    background-color: var(--surface-2);
+}
+
+.notif-item.unread {
+    background-color: var(--brand-tint);
+}
+
+/* 3. Sidebar Navigation */
+.sidebar {
+    width: 240px;
+    background-color: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: sticky;
+    top: 60px;
+    height: calc(100vh - 60px);
+    overflow-y: auto;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    color: var(--text-2);
+    font-size: 14px;
+    font-weight: 500;
+    transition: var(--transition);
+    text-decoration: none;
+}
+
+.nav-link:hover {
+    background-color: var(--brand-tint);
+    color: var(--brand);
+}
+
+.nav-link.active {
+    background-color: var(--brand);
+    color: #FFFFFF;
+    font-weight: 600;
+}
+
+/* 4. Cards & Top-Border convention */
+.card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 22px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+    position: relative;
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(197, 54, 120, 0.12);
+}
+
+/* Role identity top border convention */
+.card.student-card {
+    border-top: 4px solid var(--accent);
+}
+
+.card.admin-card {
+    border-top: 4px solid var(--brand);
+}
+
+.card-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* 5. Buttons */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: var(--transition);
+    text-decoration: none;
+}
+
+.btn-primary {
+    background-color: var(--brand);
+    color: #FFFFFF;
+}
+
+.btn-primary:hover {
+    background-color: var(--brand-dark);
+}
+
+.btn-accent {
+    background-color: var(--accent);
+    color: #FFFFFF;
+}
+
+.btn-accent:hover {
+    background-color: var(--accent-dark);
+}
+
+.btn-secondary {
+    background-color: var(--surface-2);
+    color: var(--text);
+    border: 1px solid var(--border-2);
+}
+
+.btn-secondary:hover {
+    background-color: #F3F4F6;
+}
+
+.btn-danger {
+    background-color: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid var(--danger-border);
+}
+
+.btn-danger:hover {
+    background-color: #FEE2E2;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12.5px;
+}
+
+/* 6. Form Controls */
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-label {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+}
+
+.form-input, .form-select, .form-textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border-2);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: 14px;
+    color: var(--text);
+    background: #FFFFFF;
+    transition: var(--transition);
+}
+
+.form-input:focus, .form-select:focus, .form-textarea:focus {
+    border-color: var(--brand);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(197, 54, 120, 0.15);
+}
+
+.form-textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+
+/* 7. Badges & Chips */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.badge-sample {
+    background-color: #FEF3C7;
+    color: #92400E;
+    border: 1px solid #FDE68A;
+}
+
+.badge-new {
+    background-color: var(--success-bg);
+    color: var(--success-text);
+}
+
+.badge-old {
+    background-color: #F3F4F6;
+    color: var(--muted);
+    border: 1px solid var(--border);
+}
+
+.badge-category {
+    background-color: var(--brand-tint-2);
+    color: var(--brand);
+}
+
+.chip-autofill {
+    font-size: 11px;
+    background-color: var(--brand-tint);
+    color: var(--brand);
+    padding: 2px 7px;
+    border-radius: 12px;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+/* 8. Confidence Ring SVG Component */
+.confidence-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.confidence-ring-container {
+    position: relative;
+    width: 54px;
+    height: 54px;
+}
+
+.confidence-ring-svg {
+    transform: rotate(-90deg);
+}
+
+.confidence-ring-bg {
+    fill: none;
+    stroke: var(--border);
+    stroke-width: 4;
+}
+
+.confidence-ring-progress {
+    fill: none;
+    stroke-width: 4;
+    stroke-linecap: round;
+    transition: stroke-dashoffset 0.8s ease-out;
+}
+
+.confidence-number {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.conf-high { stroke: var(--success); }
+.conf-medium { stroke: var(--brand); }
+.conf-low { stroke: var(--accent); }
+.conf-not-verified { stroke: var(--accent); }
+
+/* 9. Toast Notification System */
+#toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1000;
+}
+
+.toast {
+    min-width: 280px;
+    max-width: 420px;
+    background: var(--surface);
+    color: var(--text);
+    padding: 14px 18px;
+    border-radius: var(--radius-sm);
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+    animation: slideIn 0.25s ease-out;
+    border-left: 4px solid var(--brand);
+}
+
+.toast.toast-success { border-left-color: var(--success); }
+.toast.toast-error { border-left-color: var(--danger); background-color: var(--danger-bg); }
+.toast.toast-accent { border-left-color: var(--accent); }
+
+@keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+/* 10. Modals */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    padding: 16px;
+}
+
+.modal-overlay.open {
+    display: flex;
+}
+
+.modal-box {
+    background: var(--surface);
+    border-radius: var(--radius);
+    max-width: 520px;
+    width: 100%;
+    padding: 28px;
+    box-shadow: var(--shadow-lg);
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+/* 11. Skeletons */
+.skeleton {
+    background: linear-gradient(90deg, #F3F4F6 25%, #E5E7EB 50%, #F3F4F6 75%);
+    background-size: 200% 100%;
+    animation: skeletonLoading 1.5s infinite;
+    border-radius: 6px;
+}
+
+@keyframes skeletonLoading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* 12. Responsive rules: Mobile Bottom Tab Bar (<768px) */
+.mobile-tab-bar {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding: 8px 12px;
+    z-index: 100;
+    justify-content: space-around;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        display: none;
+    }
+    .mobile-tab-bar {
+        display: flex;
+    }
+    .page-container {
+        padding-bottom: 80px;
+    }
+}
