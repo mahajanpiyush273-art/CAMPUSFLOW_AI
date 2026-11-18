@@ -5,6 +5,7 @@ and static asset delivery.
 """
 
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, Request
@@ -27,9 +28,18 @@ seed_database(force=False)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Background tasks manager for reminder dispatching."""
-    worker_task = asyncio.create_task(run_reminder_worker())
-    yield
-    worker_task.cancel()
+    worker_task = None
+    if os.environ.get("TESTING") != "1":
+        worker_task = asyncio.create_task(run_reminder_worker())
+    try:
+        yield
+    finally:
+        if worker_task:
+            worker_task.cancel()
+            try:
+                await worker_task
+            except asyncio.CancelledError:
+                pass
 
 
 # 2. Create FastAPI application

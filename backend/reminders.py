@@ -17,9 +17,14 @@ async def run_reminder_worker() -> None:
     while True:
         try:
             check_and_dispatch_reminders()
+        except asyncio.CancelledError:
+            break
         except Exception:
             pass
-        await asyncio.sleep(30.0)
+        try:
+            await asyncio.sleep(30.0)
+        except asyncio.CancelledError:
+            break
 
 
 def check_and_dispatch_reminders() -> int:

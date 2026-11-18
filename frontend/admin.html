@@ -3,608 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CampusFlow AI - Admin Dashboard</title>
-    <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", Helvetica, Arial, sans-serif;
-            background: linear-gradient(135deg, #FFFFFF 0%, #F9E6EE 100%);
-            color: #1F2937;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            position: relative;
-            overflow-x: hidden;
-        }
-
-        /* Ambient blurred background circles */
-        .ambient-circle {
-            position: fixed;
-            border-radius: 50%;
-            pointer-events: none;
-            z-index: 0;
-            filter: blur(80px);
-        }
-
-        .ambient-orange {
-            width: 380px;
-            height: 380px;
-            background-color: rgba(255, 88, 65, 0.15); /* Sunset orange ~15% */
-            top: -60px;
-            right: -60px;
-        }
-
-        .ambient-violet {
-            width: 420px;
-            height: 420px;
-            background-color: rgba(197, 54, 120, 0.12); /* Red-violet ~12% */
-            bottom: -80px;
-            left: -80px;
-        }
-
-        /* Top Bar */
-        .top-bar {
-            width: 100%;
-            background-color: #C53678;
-            color: #FFFFFF;
-            padding: 14px 28px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-            position: relative;
-            z-index: 10;
-        }
-
-        .top-bar-inner {
-            max-width: 1060px;
-            margin: 0 auto;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .brand-group {
-            display: flex;
-            align-items: baseline;
-            gap: 14px;
-        }
-
-        .brand-name {
-            font-size: 19px;
-            font-weight: 700;
-            letter-spacing: -0.01em;
-            color: #FFFFFF;
-            text-decoration: none;
-        }
-
-        .brand-tagline {
-            font-size: 13px;
-            color: rgba(255, 255, 255, 0.85);
-            font-weight: 400;
-            letter-spacing: 0.02em;
-        }
-
-        .logout-link {
-            font-size: 13px;
-            font-weight: 600;
-            color: #FFFFFF;
-            text-decoration: none;
-            padding: 6px 12px;
-            border-radius: 8px;
-            background-color: rgba(255, 255, 255, 0.15);
-            transition: background-color 0.15s ease;
-        }
-
-        .logout-link:hover {
-            background-color: rgba(255, 255, 255, 0.25);
-        }
-
-        /* Main Content Container */
-        .main-container {
-            flex: 1;
-            max-width: 1060px;
-            width: 100%;
-            margin: 0 auto;
-            padding: 40px 24px;
-            position: relative;
-            z-index: 1;
-        }
-
-        /* Header Intro */
-        .header-section {
-            margin-bottom: 28px;
-        }
-
-        .page-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #1F2937;
-            margin-bottom: 8px;
-        }
-
-        .page-subtitle {
-            font-size: 16px;
-            color: #6B7280;
-        }
-
-        /* Error and Success Alert Messages */
-        .error-message {
-            background-color: #FFF1EE;
-            border-left: 4px solid #FF5841;
-            border-top: 1px solid rgba(255, 88, 65, 0.2);
-            border-right: 1px solid rgba(255, 88, 65, 0.2);
-            border-bottom: 1px solid rgba(255, 88, 65, 0.2);
-            color: #1F2937;
-            padding: 14px 18px;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 24px;
-            line-height: 1.5;
-        }
-
-        .success-message {
-            background-color: #ECFDF5;
-            border-left: 4px solid #10B981;
-            border-top: 1px solid rgba(16, 185, 129, 0.2);
-            border-right: 1px solid rgba(16, 185, 129, 0.2);
-            border-bottom: 1px solid rgba(16, 185, 129, 0.2);
-            color: #065F46;
-            padding: 14px 18px;
-            border-radius: 8px;
-            font-size: 14px;
-            margin-bottom: 24px;
-            line-height: 1.5;
-        }
-
-        /* Extracted Text Preview Card */
-        .extracted-preview-card {
-            border-top: 4px solid #10B981; /* Green top border */
-            padding: 26px 28px;
-            margin-bottom: 30px;
-            background-color: #FFFFFF;
-        }
-
-        .preview-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-
-        .preview-badge {
-            background-color: #ECFDF5;
-            color: #065F46;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            padding: 4px 8px;
-            border-radius: 6px;
-        }
-
-        .extracted-preview-card h3 {
-            font-size: 18px;
-            font-weight: 700;
-            color: #1F2937;
-            margin: 0;
-        }
-
-        .preview-content {
-            background-color: #F9FAFB;
-            border: 1px solid #E5E7EB;
-            border-radius: 12px;
-            padding: 16px;
-            font-family: inherit;
-            font-size: 14px;
-            line-height: 1.6;
-            color: #1F2937;
-            white-space: pre-wrap;
-            max-height: 260px;
-            overflow-y: auto;
-            margin-bottom: 12px;
-        }
-
-        .preview-note {
-            font-size: 13px;
-            color: #4B5563;
-            margin: 0;
-        }
-
-        /* Shared Card Styles */
-        .card {
-            background-color: #FFFFFF;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.06), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
-            border: 1px solid #E5E7EB;
-        }
-
-        /* Two Separate Action Cards Grid */
-        .actions-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            margin-bottom: 32px;
-            align-items: start;
-        }
-
-        .form-card {
-            padding: 30px 26px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .card-write {
-            border-top: 4px solid #C53678; /* Red-violet top border */
-        }
-
-        .card-upload {
-            border-top: 4px solid #FF5841; /* Sunset orange top border */
-        }
-
-        .card-header-group {
-            margin-bottom: 20px;
-        }
-
-        .card-badge {
-            display: inline-block;
-            font-size: 11px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.06em;
-            padding: 4px 8px;
-            border-radius: 6px;
-            margin-bottom: 8px;
-        }
-
-        .badge-write {
-            background-color: #FCE7F1;
-            color: #C53678;
-        }
-
-        .badge-upload {
-            background-color: #FFF1EE;
-            color: #FF5841;
-        }
-
-        .form-card h2 {
-            font-size: 20px;
-            font-weight: 700;
-            color: #1F2937;
-            margin-bottom: 4px;
-        }
-
-        .card-desc {
-            font-size: 13px;
-            color: #6B7280;
-            line-height: 1.4;
-        }
-
-        .field-group {
-            margin-bottom: 18px;
-        }
-
-        .field-group label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            color: #1F2937;
-            margin-bottom: 6px;
-        }
-
-        .field-hint {
-            font-size: 12px;
-            color: #6B7280;
-            margin-top: 4px;
-        }
-
-        .field-group input,
-        .field-group select,
-        .field-group textarea {
-            width: 100%;
-            padding: 11px 13px;
-            background-color: #FFFFFF;
-            border: 1px solid #D1D5DB;
-            border-radius: 12px;
-            color: #1F2937;
-            font-family: inherit;
-            font-size: 14px;
-            transition: border-color 0.15s ease, box-shadow 0.15s ease;
-        }
-
-        .field-group input:focus,
-        .field-group select:focus,
-        .field-group textarea:focus {
-            outline: none;
-            border-color: #C53678;
-            box-shadow: 0 0 0 3px rgba(197, 54, 120, 0.2);
-        }
-
-        .field-group input::placeholder,
-        .field-group textarea::placeholder {
-            color: #9CA3AF;
-        }
-
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 14px;
-        }
-
-        .field-group textarea {
-            min-height: 140px;
-            resize: vertical;
-            line-height: 1.5;
-        }
-
-        /* File Upload Field */
-        .field-group input[type="file"] {
-            padding: 9px 12px;
-            cursor: pointer;
-        }
-
-        .field-group input[type="file"]::file-selector-button {
-            background-color: #F3F4F6;
-            color: #1F2937;
-            border: 1px solid #D1D5DB;
-            border-radius: 8px;
-            padding: 6px 12px;
-            font-size: 12px;
-            font-weight: 600;
-            cursor: pointer;
-            margin-right: 10px;
-            transition: background-color 0.15s ease;
-        }
-
-        .field-group input[type="file"]::file-selector-button:hover {
-            background-color: #E5E7EB;
-        }
-
-        /* Submit Buttons */
-        .btn-submit {
-            width: 100%;
-            padding: 13px 20px;
-            color: #FFFFFF;
-            border: none;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.15s ease, transform 0.1s ease;
-        }
-
-        .btn-write {
-            background-color: #C53678;
-            box-shadow: 0 4px 10px rgba(197, 54, 120, 0.25);
-        }
-
-        .btn-write:hover {
-            background-color: #A62A63;
-        }
-
-        .btn-group-upload {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .btn-read {
-            background-color: #FF5841;
-            box-shadow: 0 4px 10px rgba(255, 88, 65, 0.25);
-        }
-
-        .btn-read:hover {
-            background-color: #E0432E;
-        }
-
-        .btn-upload {
-            background-color: #C53678;
-            box-shadow: 0 4px 10px rgba(197, 54, 120, 0.25);
-        }
-
-        .btn-upload:hover {
-            background-color: #A62A63;
-        }
-
-        .btn-submit:active {
-            transform: scale(0.99);
-        }
-
-        /* Placeholder Card */
-        .info-card {
-            padding: 26px 24px;
-        }
-
-        .info-card h2 {
-            font-size: 17px;
-            font-weight: 700;
-            color: #1F2937;
-            margin-bottom: 8px;
-        }
-
-        .info-card p {
-            font-size: 14px;
-            color: #6B7280;
-        }
-
-        /* Responsive styling for phones & tablets */
-        @media (max-width: 768px) {
-            .top-bar {
-                padding: 12px 18px;
-            }
-
-            .main-container {
-                padding: 28px 16px;
-            }
-
-            .page-title {
-                font-size: 24px;
-            }
-
-            .actions-grid {
-                grid-template-columns: 1fr;
-                gap: 24px;
-            }
-
-            .form-card {
-                padding: 24px 18px;
-            }
-
-            .form-row {
-                grid-template-columns: 1fr;
-                gap: 0;
-            }
-        }
-    </style>
+    <title>CampusFlow AI — Admin Portal</title>
+    <link rel="stylesheet" href="/static/css/tokens.css">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/components.css">
 </head>
 <body>
-    <!-- Ambient blurred background circles -->
-    <div class="ambient-circle ambient-orange" aria-hidden="true"></div>
-    <div class="ambient-circle ambient-violet" aria-hidden="true"></div>
+    <div class="ambient-circle ambient-orange"></div>
+    <div class="ambient-circle ambient-violet"></div>
 
     <!-- Top Bar -->
     <header class="top-bar">
         <div class="top-bar-inner">
             <div class="brand-group">
-                <a href="/" class="brand-name">CampusFlow</a>
-                <span class="brand-tagline">Ask. Verify. Act.</span>
+                <a href="#/dashboard" class="brand-name">CampusFlow AI</a>
+                <span class="brand-tagline">Admin & Faculty Portal</span>
             </div>
-            <a href="/" class="logout-link">Sign out</a>
+
+            <div class="top-bar-actions">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span id="admin-full-name" style="font-size: 13.5px; font-weight: 600; color: #FFFFFF;">Administrator</span>
+                    <span class="badge badge-primary" style="background: rgba(255,255,255,0.25); color: #fff;">Staff Access</span>
+                    <button id="logout-btn" class="btn btn-secondary btn-sm" style="background: rgba(255,255,255,0.18); color: #fff; border: none; padding: 5px 10px;">
+                        Logout
+                    </button>
+                </div>
+            </div>
         </div>
     </header>
 
-    <!-- Main Content Area -->
-    <main class="main-container">
-        <!-- Header -->
-        <div class="header-section">
-            <h1 class="page-title">Admin dashboard</h1>
-            <p class="page-subtitle">Publish a notice for students by writing text or uploading an official notice image.</p>
-        </div>
+    <!-- Main Application Layout -->
+    <div class="app-layout">
+        <!-- Desktop Sidebar -->
+        <nav class="sidebar">
+            <a href="#/dashboard" class="nav-link active">📊 Insights Dashboard</a>
+            <a href="#/upload" class="nav-link">📤 Upload Document</a>
+            <a href="#/notices" class="nav-link">📁 Notices Manager</a>
+            <a href="#/review-queue" class="nav-link">
+                <span>❓ Review Queue</span>
+                <span id="sidebar-review-badge" class="badge badge-accent" style="display: none; margin-left: auto; font-size: 11px; padding: 1px 6px;">0</span>
+            </a>
+            <a href="#/submissions" class="nav-link">📋 Form Submissions</a>
+            <a href="#/offices" class="nav-link">🏢 Campus Offices</a>
+            <a href="#/ai-status" class="nav-link">⚡ AI Engine Status</a>
 
-        {% if error %}
-        <div class="error-message">
-            {{ error }}
-        </div>
-        {% endif %}
-
-        {% if success %}
-        <div class="success-message">
-            {{ success }}
-        </div>
-        {% endif %}
-
-        {% if notice_text %}
-        <!-- Dedicated Extracted Text Preview Card -->
-        <div class="card extracted-preview-card">
-            <div class="preview-header">
-                <span class="preview-badge">Extracted from image</span>
-                <h3>Extracted Notice Text</h3>
+            <div style="margin-top: auto; padding: 12px; background: var(--surface-2); border-radius: var(--radius-sm); border: 1px solid var(--border); font-size: 12px;">
+                <div style="font-weight: 700; color: var(--brand); margin-bottom: 2px;">CampusFlow AI</div>
+                <div class="text-muted">Aarambhathon Hackathon<br>Team Axiom</div>
             </div>
-            <div class="preview-content">{{ notice_text }}</div>
-            <p class="preview-note">We also placed this text into the <strong>Option 1 (Write notice)</strong> form below so you can make edits and click <strong>"Save written notice"</strong>.</p>
+        </nav>
+
+        <!-- Dynamic Content View Area -->
+        <div class="main-content">
+            <main id="admin-view-container" class="page-container" aria-live="polite"></main>
         </div>
-        {% endif %}
+    </div>
 
-        <!-- Two Separate Action Cards: Write Notice vs Upload Notice -->
-        <div class="actions-grid">
-            <!-- Option 1: Write a Notice -->
-            <div class="card form-card card-write">
-                <div class="card-header-group">
-                    <span class="card-badge badge-write">Option 1</span>
-                    <h2>Write notice</h2>
-                    <p class="card-desc">Type and publish notice content directly for students to read.</p>
-                </div>
+    <!-- Mobile Bottom Tab Bar (< 768px) -->
+    <nav class="mobile-tab-bar">
+        <a href="#/dashboard" class="mobile-tab-item nav-link" style="padding: 6px 10px; font-size: 12px; flex-direction: column; gap: 2px;">
+            <span>📊</span><span>Stats</span>
+        </a>
+        <a href="#/upload" class="mobile-tab-item nav-link" style="padding: 6px 10px; font-size: 12px; flex-direction: column; gap: 2px;">
+            <span>📤</span><span>Upload</span>
+        </a>
+        <a href="#/notices" class="mobile-tab-item nav-link" style="padding: 6px 10px; font-size: 12px; flex-direction: column; gap: 2px;">
+            <span>📁</span><span>Notices</span>
+        </a>
+        <a href="#/review-queue" class="mobile-tab-item nav-link" style="padding: 6px 10px; font-size: 12px; flex-direction: column; gap: 2px;">
+            <span>❓</span><span>Review</span>
+        </a>
+        <a href="#/ai-status" class="mobile-tab-item nav-link" style="padding: 6px 10px; font-size: 12px; flex-direction: column; gap: 2px;">
+            <span>⚡</span><span>AI</span>
+        </a>
+    </nav>
 
-                <form action="/admin/upload" method="post">
-                    <div class="field-group">
-                        <label for="write-title">Title</label>
-                        <input type="text" id="write-title" name="title" value="{{ title or '' }}" placeholder="e.g., End Semester Examination Schedule" required>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="field-group">
-                            <label for="write-category">Category</label>
-                            <select id="write-category" name="category" required>
-                                <option value="" disabled {% if not category %}selected{% endif %}>Select category</option>
-                                <option value="Fees" {% if category == 'Fees' %}selected{% endif %}>Fees</option>
-                                <option value="Exams" {% if category == 'Exams' %}selected{% endif %}>Exams</option>
-                                <option value="Forms" {% if category == 'Forms' %}selected{% endif %}>Forms</option>
-                                <option value="Events" {% if category == 'Events' %}selected{% endif %}>Events</option>
-                                <option value="Admissions" {% if category == 'Admissions' %}selected{% endif %}>Admissions</option>
-                                <option value="Other" {% if category == 'Other' %}selected{% endif %}>Other</option>
-                            </select>
-                        </div>
-
-                        <div class="field-group">
-                            <label for="write-date">Date</label>
-                            <input type="date" id="write-date" name="date" value="{{ date or '' }}" required>
-                        </div>
-                    </div>
-
-                    <div class="field-group">
-                        <label for="write-text">Notice text</label>
-                        <textarea id="write-text" name="notice_text" placeholder="Type the complete notice details here..." required>{{ notice_text or '' }}</textarea>
-                    </div>
-
-                    <button type="submit" class="btn-submit btn-write">Save written notice</button>
-                </form>
-            </div>
-
-            <!-- Option 2: Upload Notice Image -->
-            <div class="card form-card card-upload">
-                <div class="card-header-group">
-                    <span class="card-badge badge-upload">Option 2</span>
-                    <h2>Upload notice image</h2>
-                    <p class="card-desc">Upload a signed notice flyer, circular, or announcement photo.</p>
-                </div>
-
-                <form action="/admin/upload" method="post" enctype="multipart/form-data">
-                    <div class="field-group">
-                        <label for="upload-title">Title</label>
-                        <input type="text" id="upload-title" name="title" value="{{ title or '' }}" placeholder="e.g., Circular: Campus Hostel Guidelines" required>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="field-group">
-                            <label for="upload-category">Category</label>
-                            <select id="upload-category" name="category" required>
-                                <option value="" disabled {% if not category %}selected{% endif %}>Select category</option>
-                                <option value="Fees" {% if category == 'Fees' %}selected{% endif %}>Fees</option>
-                                <option value="Exams" {% if category == 'Exams' %}selected{% endif %}>Exams</option>
-                                <option value="Forms" {% if category == 'Forms' %}selected{% endif %}>Forms</option>
-                                <option value="Events" {% if category == 'Events' %}selected{% endif %}>Events</option>
-                                <option value="Admissions" {% if category == 'Admissions' %}selected{% endif %}>Admissions</option>
-                                <option value="Other" {% if category == 'Other' %}selected{% endif %}>Other</option>
-                            </select>
-                        </div>
-
-                        <div class="field-group">
-                            <label for="upload-date">Date</label>
-                            <input type="date" id="upload-date" name="date" value="{{ date or '' }}" required>
-                        </div>
-                    </div>
-
-                    <div class="field-group">
-                        <label for="upload-image">Notice image (JPG or PNG)</label>
-                        <input type="file" id="upload-image" name="image" accept=".jpg,.jpeg,.png,image/jpeg,image/png" required>
-                        <p class="field-hint">Upload a clear photo or scanned copy of the notice.</p>
-                    </div>
-
-                    <div class="btn-group-upload">
-                        <button type="submit" formaction="/admin/read-image" class="btn-submit btn-read">Read image text & edit</button>
-                        <button type="submit" class="btn-submit btn-upload">Save notice image directly</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- Placeholder Card: Unanswered Questions -->
-        <div class="card info-card">
-            <h2>Unanswered questions</h2>
-            <p>Coming soon</p>
-        </div>
-    </main>
+    <script type="module" src="/static/js/admin/app.js"></script>
 </body>
 </html>
