@@ -473,3 +473,162 @@ async def get_student_dashboard(user: Dict[str, Any] = Depends(require_role("stu
         "upcoming_events": [dict(r) for r in events_rows],
         "pending_questions_count": pending_q_count,
     }
+
+
+class FormSubmitRequest(BaseModel):
+    values: Dict[str, Any]
+    confirmed: bool
+
+
+@router.get("/forms")
+async def list_available_forms(user: Dict[str, Any] = Depends(require_role("student"))):
+    """List all active official campus forms with office details."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        rows = cursor.execute("""
+            SELECT f.id, f.slug, f.title, f.description, f.instructions,
+                   o.name as office_name, o.location as office_location
+            FROM forms f
+            LEFT JOIN offices o ON o.id = f.office_id
+            WHERE f.active = 1
+            ORDER BY f.title ASC
+        """).fetchall()
+
+    return {"forms": [dict(r) for r in rows]}
+
+
+@router.get("/forms/{slug}")
+async def get_form_with_autofill(
+    slug: str,
+    user: Dict[str, Any] = Depends(require_role("student")),
+):
+    """
+    Retrieve form fields populated with student profile autofill values.
+    Annotates each field with whether it was autofilled from profile.
+    """
+    user_id = user["id"]
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        form_row = cursor.execute("""
+            SELECT f.*, o.name as office_name, o.location as office_location
+            FROM forms f
+            LEFT JOIN offices o ON o.id = f.office_id
+            WHERE f.slug = ? AND f.active = 1
+        """, (slug,)).fetchone()
+        if not form_row:
+            raise HTTPException(status_code=404, detail="Form not found.")
+
+        profile_row = cursor.execute(
+            "SELECT * FROM student_profiles WHERE user_id = ?",
+            (user_id,)
+        ).fetchone()
+
+    form_dict = dict(form_row)
+    fields = json.loads(form_dict["fields_json"])
+    profile_dict = dict(profile_row) if profile_row else {}
+
+    # Map user and profile values
+    profile_dict["full_name"] = user["full_name"]
+    profile_dict["email"] = user["email"]
+
+    processed_fields = []
+    for field in fields:
+        f_copy = dict(field)
+        pkey = f_copy.get("profile_key")
+        val = profile_dict.get(pkey) if pkey else None
+        f_copy["value"] = val or ""
+        f_copy["autofilled"] = bool(val and str(val).strip())
+        processed_fields.append(f_copy)
+
+    form_dict["fields"] = processed_fields
+    del form_dict["fields_json"]
+
+    return {"form": form_dict}
+
+
+@router.post("/forms/{slug}/submit")
+async def submit_form(
+    slug: str,
+    payload: FormSubmitRequest,
+    user: Dict[str, Any] = Depends(require_role("student")),
+):
+    """
+    Submit completed form:
+    Enforces strict confirmation rule: REJECTS if payload.confirmed is not True.
+    Validates required fields and records submission.
+    """
+    if not payload.confirmed:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Submission rejected: You must review all details and confirm before submitting."
+        )
+
+    user_id = user["id"]
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        form_row = cursor.execute("SELECT id, title, fields_json FROM forms WHERE slug = ? AND active = 1", (slug,)).fetchone()
+        if not form_row:
+            raise HTTPException(status_code=404, detail="Form not found.")
+
+        form_id = form_row["id"]
+        form_title = form_row["title"]
+        fields = json.loads(form_row["fields_json"])
+
+        # Validate required fields
+        for f in fields:
+            if f.get("required"):
+                val = payload.values.get(f["name"])
+                if val is None or not str(val).strip():
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Required field '{f['label']}' is missing."
+                    )
+
+        # Insert submission
+        cursor.execute("""
+            INSERT INTO form_submissions (
+                form_id, user_id, values_json, status, confirmed_at, created_at
+            ) VALUES (?, ?, ?, 'submitted', ?, ?)
+        """, (form_id, user_id, json.dumps(payload.values), now_str, now_str))
+        sub_id = cursor.lastrowid
+        conn.commit()
+
+    ref_number = f"CF-{sub_id:05d}"
+
+    return {
+        "ok": True,
+        "submission_id": sub_id,
+        "ref_number": ref_number,
+        "form_title": form_title,
+        "confirmed_at": now_str,
+        "status": "submitted",
+        "message": f"Form '{form_title}' submitted successfully! Reference: {ref_number}"
+    }
+
+
+@router.get("/my/submissions")
+async def get_my_form_submissions(user: Dict[str, Any] = Depends(require_role("student"))):
+    """Retrieve history of submitted forms with receipt reference numbers."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        rows = cursor.execute("""
+            SELECT s.id, s.status, s.confirmed_at, s.created_at, s.values_json,
+                   f.title as form_title, f.slug as form_slug, o.name as office_name
+            FROM form_submissions s
+            JOIN forms f ON f.id = s.form_id
+            LEFT JOIN offices o ON o.id = f.office_id
+            WHERE s.user_id = ?
+            ORDER BY s.id DESC
+        """, (user["id"],)).fetchall()
+
+    submissions = []
+    for r in rows:
+        sd = dict(r)
+        sd["ref_number"] = f"CF-{sd['id']:05d}"
+        sd["values"] = json.loads(sd["values_json"])
+        del sd["values_json"]
+        submissions.append(sd)
+
+    return {"submissions": submissions}

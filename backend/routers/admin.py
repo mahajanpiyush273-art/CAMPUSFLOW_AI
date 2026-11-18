@@ -609,3 +609,113 @@ async def get_admin_insights(user: Dict[str, Any] = Depends(require_role("admin"
         "top_repeated": [dict(r) for r in top_repeated],
         "daily_questions": list(reversed([dict(r) for r in daily_rows])),
     }
+
+
+class SubmissionStatusUpdate(BaseModel):
+    status: str
+
+
+class OfficeCreateUpdate(BaseModel):
+    name: str
+    location: str
+    phone: str
+    email: str
+    hours: str
+    keywords: str
+
+
+@router.get("/submissions")
+async def list_admin_form_submissions(user: Dict[str, Any] = Depends(require_role("admin"))):
+    """Read-only table of all student form submissions with values and review actions."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        rows = cursor.execute("""
+            SELECT s.*, f.title as form_title, f.slug as form_slug,
+                   u.full_name as student_name, u.email as student_email
+            FROM form_submissions s
+            JOIN forms f ON f.id = s.form_id
+            JOIN users u ON u.id = s.user_id
+            ORDER BY s.id DESC
+        """).fetchall()
+
+    submissions = []
+    for r in rows:
+        sd = dict(r)
+        sd["ref_number"] = f"CF-{sd['id']:05d}"
+        sd["values"] = json.loads(sd["values_json"])
+        del sd["values_json"]
+        submissions.append(sd)
+
+    return {"submissions": submissions, "count": len(submissions)}
+
+
+@router.patch("/submissions/{submission_id}")
+async def update_form_submission_status(
+    submission_id: int,
+    payload: SubmissionStatusUpdate,
+    user: Dict[str, Any] = Depends(require_role("admin")),
+):
+    """Mark a student form submission as 'reviewed' or 'submitted'."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        exists = cursor.execute("SELECT id FROM form_submissions WHERE id = ?", (submission_id,)).fetchone()
+        if not exists:
+            raise HTTPException(status_code=404, detail="Submission not found.")
+
+        cursor.execute(
+            "UPDATE form_submissions SET status = ? WHERE id = ?",
+            (payload.status, submission_id)
+        )
+        conn.commit()
+
+    return {"ok": True, "message": f"Submission status updated to '{payload.status}'."}
+
+
+@router.get("/offices")
+async def list_admin_offices(user: Dict[str, Any] = Depends(require_role("admin"))):
+    """List all campus offices with contact details and matching keyword tags."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        rows = cursor.execute("SELECT * FROM offices ORDER BY id ASC").fetchall()
+    return {"offices": [dict(r) for r in rows]}
+
+
+@router.post("/offices")
+async def create_office(
+    payload: OfficeCreateUpdate,
+    user: Dict[str, Any] = Depends(require_role("admin")),
+):
+    """Create a new campus office contact."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO offices (name, location, phone, email, hours, keywords)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (payload.name, payload.location, payload.phone, payload.email, payload.hours, payload.keywords))
+        new_id = cursor.lastrowid
+        conn.commit()
+
+    return {"ok": True, "office_id": new_id, "message": f"Office '{payload.name}' created."}
+
+
+@router.put("/offices/{office_id}")
+async def update_office(
+    office_id: int,
+    payload: OfficeCreateUpdate,
+    user: Dict[str, Any] = Depends(require_role("admin")),
+):
+    """Update campus office location, contact hours, or keyword tags."""
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        exists = cursor.execute("SELECT id FROM offices WHERE id = ?", (office_id,)).fetchone()
+        if not exists:
+            raise HTTPException(status_code=404, detail="Office not found.")
+
+        cursor.execute("""
+            UPDATE offices
+            SET name = ?, location = ?, phone = ?, email = ?, hours = ?, keywords = ?
+            WHERE id = ?
+        """, (payload.name, payload.location, payload.phone, payload.email, payload.hours, payload.keywords, office_id))
+        conn.commit()
+
+    return {"ok": True, "message": f"Office '{payload.name}' updated successfully."}
