@@ -38,26 +38,26 @@
             backdrop-filter: blur(12px);
             -webkit-backdrop-filter: blur(12px);
             border: 1px solid rgba(255, 255, 255, 0.9);
-            box-shadow: 0 12px 36px rgba(197, 54, 120, 0.07), 0 2px 6px rgba(0, 0, 0, 0.03);
-            border-radius: 24px;
-            padding: 44px 32px;
+            box-shadow: 0 10px 30px rgba(197, 54, 120, 0.07), 0 2px 6px rgba(0, 0, 0, 0.03);
+            border-radius: 20px;
+            padding: 24px 28px;
             text-align: center;
-            margin-bottom: 48px;
+            margin-bottom: 20px;
             position: relative;
         }
 
         .pill-tag {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 12.5px;
+            gap: 5px;
+            padding: 4px 11px;
+            border-radius: 16px;
+            font-size: 12px;
             font-weight: 600;
             background: rgba(255, 255, 255, 0.9);
             border: 1px solid var(--border);
             color: var(--text-2);
-            box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         }
 
         .card-equal-height {
@@ -92,56 +92,53 @@
         </div>
     </header>
 
-    <main class="page-container" style="padding-top: 36px; position: relative; z-index: 1;">
-        <!-- Hero Section with Glassmorphic Container -->
+    <main class="page-container" style="padding-top: 18px; position: relative; z-index: 1;">
+        <!-- Hero Section with Compact Glassmorphic Container -->
         <section class="hero-card-wrapper">
-            <div class="badge badge-primary" style="margin-bottom: 16px; font-size: 13px; padding: 6px 16px; font-weight: 600; letter-spacing: 0.02em; border-radius: 20px;">
+            <div class="badge badge-primary" style="margin-bottom: 10px; font-size: 12px; padding: 4px 14px; font-weight: 600; letter-spacing: 0.02em; border-radius: 20px;">
                 🏛️ Official Campus Information & Action Assistant
             </div>
 
-            <h1 style="font-size: 40px; margin-bottom: 16px; color: var(--text); line-height: 1.25;">
+            <h1 style="font-size: 28px; margin-bottom: 8px; color: var(--text); line-height: 1.25;">
                 Smart Campus Query & Action Assistant
             </h1>
 
-            <!-- Problem Statement 3-Line Description -->
-            <p style="font-size: 17.5px; max-width: 740px; margin: 0 auto 28px auto; color: var(--text-2); line-height: 1.6;">
-                Campus notices, fee deadlines, and exam schedules are scattered across physical boards, PDFs, and unofficial WhatsApp groups. 
-                <strong>CampusFlow AI unifies official circulars into one trusted assistant</strong>—delivering verified answers with direct source citations, grounded confidence scores, and automated deadline reminders.
+            <!-- Concise Value Prop -->
+            <p style="font-size: 15px; max-width: 700px; margin: 0 auto 12px auto; color: var(--text-2); line-height: 1.5;">
+                Unified official circulars, fee deadlines, and exam schedules into one trusted assistant—delivering verified answers with source citations, confidence scores, and proactive deadline alerts.
             </p>
 
             <!-- Feature Highlight Pills -->
-            <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 28px;">
-                <span class="pill-tag">✓ 100% Notice-Backed Answers</span>
-                <span class="pill-tag">⏰ Proactive Deadline Alerts</span>
+            <div style="display: flex; justify-content: center; gap: 8px; flex-wrap: wrap;">
+                <span class="pill-tag">✓ 100% Notice-Backed</span>
+                <span class="pill-tag">⏰ Deadline Alerts</span>
                 <span class="pill-tag">📝 Profile-Autofilled Forms</span>
                 <span class="pill-tag">🛡️ Zero AI Guesswork</span>
             </div>
-
-            <!-- Hero Action Buttons -->
-            <div style="display: flex; justify-content: center; gap: 14px; flex-wrap: wrap;">
-                <a href="/login?role=student" class="btn btn-accent" style="padding: 12px 32px; font-size: 15px; font-weight: 700;">Student Portal →</a>
-                <a href="/login?role=admin" class="btn btn-primary" style="padding: 12px 32px; font-size: 15px; font-weight: 700;">Admin Dashboard →</a>
-            </div>
         </section>
 
-        <!-- Role Chooser Cards (Vertically Aligned Buttons) -->
-        <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-bottom: 56px;">
-            <div class="card student-card card-equal-height" style="padding: 32px;">
-                <div style="font-size: 34px; margin-bottom: 12px;">🎓</div>
-                <h3 style="font-size: 21px; margin-bottom: 8px;">Student Portal</h3>
-                <p class="text-muted" style="margin-bottom: 24px; line-height: 1.55;">
+        <!-- Role Chooser Cards (Immediately Visible Without Scrolling) -->
+        <section style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; margin-bottom: 36px;">
+            <div class="card student-card card-equal-height" style="padding: 22px 24px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <h3 style="font-size: 19px; margin: 0;">Student Portal</h3>
+                    <span style="font-size: 26px;">🎓</span>
+                </div>
+                <p class="text-muted" style="margin-bottom: 18px; line-height: 1.5; font-size: 13.5px;">
                     Ask questions in natural English or Hinglish, track upcoming semester deadlines, browse approved campus circulars, and submit official forms with profile autofill.
                 </p>
-                <a href="/login?role=student" class="btn btn-accent btn-bottom" style="width: 100%; padding: 12px; font-weight: 700; text-align: center;">Sign in as Student →</a>
+                <a href="/login?role=student" class="btn btn-accent btn-bottom" style="width: 100%; padding: 10px; font-weight: 700; text-align: center; text-decoration: none;">Sign in as Student →</a>
             </div>
 
-            <div class="card admin-card card-equal-height" style="padding: 32px;">
-                <div style="font-size: 34px; margin-bottom: 12px;">🏛️</div>
-                <h3 style="font-size: 21px; margin-bottom: 8px;">Admin Dashboard</h3>
-                <p class="text-muted" style="margin-bottom: 24px; line-height: 1.55;">
+            <div class="card admin-card card-equal-height" style="padding: 22px 24px;">
+                <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                    <h3 style="font-size: 19px; margin: 0;">Admin Dashboard</h3>
+                    <span style="font-size: 26px;">🏛️</span>
+                </div>
+                <p class="text-muted" style="margin-bottom: 18px; line-height: 1.5; font-size: 13.5px;">
                     Upload circulars via PDF, Word or photo. AI validates dates, flags conflicts, indexes searchable notices, and lets you answer unverified inquiries once for all students.
                 </p>
-                <a href="/login?role=admin" class="btn btn-primary btn-bottom" style="width: 100%; padding: 12px; font-weight: 700; text-align: center;">Sign in as Admin →</a>
+                <a href="/login?role=admin" class="btn btn-primary btn-bottom" style="width: 100%; padding: 10px; font-weight: 700; text-align: center; text-decoration: none;">Sign in as Admin →</a>
             </div>
         </section>
 
