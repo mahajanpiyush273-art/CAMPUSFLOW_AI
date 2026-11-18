@@ -88,8 +88,8 @@ def expand_query_with_synonyms(keywords: List[str]) -> List[str]:
 
     # 2. Check campus domain synonym groups
     for group in SYNONYM_GROUPS:
-        # Check if any keyword matches a group item
-        if any(kw in group or any(kw in item for item in group) for kw in keywords):
+        # Check if any keyword matches a group item exactly or as a token in a multi-word phrase
+        if any(any(kw == syn or kw in syn.split() for syn in group) for kw in keywords):
             # Add all primary single-word synonyms from this group
             for syn in group:
                 for token in syn.split():
@@ -197,14 +197,27 @@ def search_fts5_chunks(
         item["old"] = is_document_expired(item.get("expiry_date"))
         results.append(item)
 
-    # Rank matches by BM25 score with a mild penalty for expired (OLD) documents
+    # Rank matches by BM25 score with an exact query keyword hit bonus and mild penalty for expired (OLD) documents
     for item in results:
         base_rank = float(item.get("bm25_score", 0.0))
+        chunk_content = f"{item.get('doc_title', '')} {item.get('heading', '')} {item.get('chunk_text', '')}".lower()
+        title_lower = str(item.get("doc_title", "")).lower()
+
+        chunk_tokens = set(clean_and_tokenize(chunk_content))
+        title_tokens = set(clean_and_tokenize(title_lower))
+
+        # Count how many original query keywords appear in chunk or title
+        raw_hits = sum(1 for kw in raw_keywords if kw in chunk_tokens)
+        title_hits = sum(1 for kw in raw_keywords if kw in title_tokens)
+
+        # More negative adjusted_rank means higher relevance in ascending sort
+        score_rank = base_rank - (raw_hits * 3.5) - (title_hits * 5.0)
+
         if item.get("old"):
-            # A negative BM25 score multiplied by 0.6 weakens the score while preserving relevance
-            item["adjusted_rank"] = base_rank * 0.6 if base_rank < 0 else base_rank * 1.4
-        else:
-            item["adjusted_rank"] = base_rank
+            # Weaken expired notice rank
+            score_rank = score_rank * 0.6 if score_rank < 0 else score_rank * 1.4
+
+        item["adjusted_rank"] = score_rank
 
     results.sort(key=lambda x: x["adjusted_rank"])
     return results[:limit]
@@ -222,7 +235,7 @@ def compute_confidence_score(
     coverage   = fraction of question keywords found in best chunk + title (0-1)
     bm25_norm  = squashed BM25 score (0-1)
     title_hit  = 1 if keyword in title, else 0
-    llm_ok     = 1 if LLM answered from text, 0 if it could not, 0.5 in offline mode
+    llm_ok     = 1 if LLM answered from text, 0 if it could not, 1 in offline mode when coverage >= 50%
     confidence = round(100 * (0.45*coverage + 0.30*bm25_norm + 0.10*title_hit + 0.15*llm_ok))
     minus 15 if expired (OLD)
     """
@@ -232,26 +245,35 @@ def compute_confidence_score(
     chunk_content = f"{top_chunk.get('doc_title', '')} {top_chunk.get('heading', '')} {top_chunk.get('chunk_text', '')}".lower()
     title_lower = str(top_chunk.get("doc_title", "")).lower()
 
-    # 1. Coverage
-    matched_kws = sum(1 for kw in raw_keywords if kw in chunk_content)
-    # Also check if any synonym matches
-    if not matched_kws and expanded:
-        matched_kws = sum(1 for kw in expanded if kw in chunk_content)
+    chunk_tokens = set(clean_and_tokenize(chunk_content))
+    title_tokens = set(clean_and_tokenize(title_lower))
 
-    total_kws = max(len(raw_keywords), 1)
-    coverage = min(1.0, matched_kws / total_kws)
+    # 1. Coverage using token matching to prevent false substring collisions
+    matched_kws = sum(1 for kw in raw_keywords if kw in chunk_tokens)
+    matched_expanded = sum(1 for kw in expanded if kw in chunk_tokens)
+
+    total_raw = max(len(raw_keywords), 1)
+    raw_coverage = min(1.0, matched_kws / total_raw)
+    expanded_coverage = min(1.0, matched_expanded / max(len(expanded), 1))
+
+    coverage = max(raw_coverage, 0.7 * expanded_coverage + 0.3 * raw_coverage)
+
+    # Low coverage penalty: if fewer than 35% of core query keywords are in the notice,
+    # the document does not answer the student's question!
+    if raw_coverage < 0.35 and len(raw_keywords) >= 3:
+        score = int(round(raw_coverage * 60))
+        return score, "Not verified"
 
     # 2. BM25 Norm
-    # FTS5 rank is negative (e.g., -1.5 to -30). Squash using tanh or log
     raw_bm25 = abs(float(top_chunk.get("bm25_score", -5.0)))
     bm25_norm = min(1.0, math.tanh(raw_bm25 / 10.0))
 
     # 3. Title Hit
-    title_hit = 1.0 if any(kw in title_lower for kw in raw_keywords) else 0.0
+    title_hit = 1.0 if any(kw in title_tokens for kw in raw_keywords) else 0.0
 
     # 4. LLM OK weight
     if is_offline:
-        llm_val = 0.5 if coverage >= 0.5 else 0.2
+        llm_val = 1.0 if (raw_coverage >= 0.5 or matched_kws >= 2) else 0.5
     else:
         llm_val = 1.0 if llm_answered_ok else 0.0
 

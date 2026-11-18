@@ -113,12 +113,19 @@ def understand_query(
         return llm_res
 
     # Offline / rule-based fallback
-    tokens = clean_and_tokenize(q_clean)
+    rewritten = q_clean
+    if recent_history:
+        prev_text = " ".join([turn.get("content", "") for turn in recent_history[-2:]])
+        context_words = [w for w in clean_and_tokenize(prev_text) if w in ["fee", "fees", "hostel", "exam", "exams", "room", "bonafide", "attendance"]]
+        if context_words and not any(w in q_clean.lower() for w in context_words):
+            rewritten = f"{context_words[0]} {q_clean}"
+
+    tokens = clean_and_tokenize(rewritten)
     return {
         "is_campus_question": True,
         "is_greeting": False,
         "greeting_reply": None,
-        "rewritten_query": q_clean,
+        "rewritten_query": rewritten,
         "search_keywords": tokens,
         "language_style": "hinglish" if any(w in q_lower for w in ["kab", "kahan", "kaha", "kitna", "kaise", "jama"]) else "english",
     }
