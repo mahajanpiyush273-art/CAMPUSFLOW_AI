@@ -9,8 +9,10 @@ from backend.config import GROQ_VISION_MODELS, GEMINI_MODELS
 
 def extract_text_from_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> str:
     """Extract text from a notice image using Groq Vision or Gemini Flash."""
-    groq_api_key = os.environ.get("GROQ_API_KEY")
-    gemini_api_key = os.environ.get("GEMINI_API_KEY")
+    import backend.config as cfg
+    cfg.reload_env()
+    groq_api_key = cfg.GROQ_API_KEY
+    gemini_api_key = cfg.GEMINI_API_KEY
 
     if not groq_api_key and not gemini_api_key:
         raise ValueError(

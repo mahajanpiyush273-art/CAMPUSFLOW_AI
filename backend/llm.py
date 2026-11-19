@@ -92,20 +92,23 @@ def chat_text(
     Returns (response_text, provider_name, model_name).
     If all fail or no keys are set, returns (None, 'offline', None).
     """
+    import backend.config as cfg
+    cfg.reload_env()
+
     providers_queue = []
 
-    if GROQ_API_KEY and not _is_breaker_active("groq_1"):
-        providers_queue.append(("groq_1", "groq", GROQ_API_KEY, GROQ_TEXT_MODELS))
-    if GROQ_API_KEY_2 and not _is_breaker_active("groq_2"):
-        providers_queue.append(("groq_2", "groq", GROQ_API_KEY_2, GROQ_TEXT_MODELS))
+    if cfg.GROQ_API_KEY and not _is_breaker_active("groq_1"):
+        providers_queue.append(("groq_1", "groq", cfg.GROQ_API_KEY, cfg.GROQ_TEXT_MODELS))
+    if cfg.GROQ_API_KEY_2 and not _is_breaker_active("groq_2"):
+        providers_queue.append(("groq_2", "groq", cfg.GROQ_API_KEY_2, cfg.GROQ_TEXT_MODELS))
 
-    if GEMINI_API_KEY and not _is_breaker_active("gemini_1"):
-        providers_queue.append(("gemini_1", "gemini", GEMINI_API_KEY, GEMINI_MODELS))
-    if GEMINI_API_KEY_2 and not _is_breaker_active("gemini_2"):
-        providers_queue.append(("gemini_2", "gemini", GEMINI_API_KEY_2, GEMINI_MODELS))
+    if cfg.GEMINI_API_KEY and not _is_breaker_active("gemini_1"):
+        providers_queue.append(("gemini_1", "gemini", cfg.GEMINI_API_KEY, cfg.GEMINI_MODELS))
+    if cfg.GEMINI_API_KEY_2 and not _is_breaker_active("gemini_2"):
+        providers_queue.append(("gemini_2", "gemini", cfg.GEMINI_API_KEY_2, cfg.GEMINI_MODELS))
 
-    if EXTRA_LLM_BASE_URL and EXTRA_LLM_API_KEY and not _is_breaker_active("extra_llm"):
-        providers_queue.append(("extra_llm", "extra", EXTRA_LLM_API_KEY, [EXTRA_LLM_MODEL or "default"]))
+    if cfg.EXTRA_LLM_BASE_URL and cfg.EXTRA_LLM_API_KEY and not _is_breaker_active("extra_llm"):
+        providers_queue.append(("extra_llm", "extra", cfg.EXTRA_LLM_API_KEY, [cfg.EXTRA_LLM_MODEL or "default"]))
 
     for p_id, p_type, p_key, models in providers_queue:
         for model in models:
@@ -211,9 +214,11 @@ def chat_vision(
     base64_img = base64.b64encode(image_bytes).decode("utf-8")
 
     # 1. Try Groq Vision first
-    groq_keys = [k for k in [GROQ_API_KEY, GROQ_API_KEY_2] if k]
+    import backend.config as cfg
+    cfg.reload_env()
+    groq_keys = [k for k in [cfg.GROQ_API_KEY, cfg.GROQ_API_KEY_2] if k]
     for key in groq_keys:
-        for model in GROQ_VISION_MODELS:
+        for model in cfg.GROQ_VISION_MODELS:
             try:
                 client = Groq(api_key=key, timeout=timeout)
                 resp = client.chat.completions.create(
@@ -240,9 +245,9 @@ def chat_vision(
                 continue
 
     # 2. Try Gemini Vision fallback
-    gemini_keys = [k for k in [GEMINI_API_KEY, GEMINI_API_KEY_2] if k]
+    gemini_keys = [k for k in [cfg.GEMINI_API_KEY, cfg.GEMINI_API_KEY_2] if k]
     for key in gemini_keys:
-        for model in GEMINI_MODELS:
+        for model in cfg.GEMINI_MODELS:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
                 payload = {

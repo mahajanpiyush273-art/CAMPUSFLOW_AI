@@ -50,6 +50,34 @@ EXTRA_LLM_BASE_URL = os.environ.get("EXTRA_LLM_BASE_URL", "")
 EXTRA_LLM_API_KEY = os.environ.get("EXTRA_LLM_API_KEY", "")
 EXTRA_LLM_MODEL = os.environ.get("EXTRA_LLM_MODEL", "")
 
+
+def reload_env():
+    """Reload environment variables from .env dynamically."""
+    load_dotenv(BASE_DIR / ".env", override=True)
+    global GROQ_API_KEY, GROQ_API_KEY_2, GROQ_TEXT_MODELS, GROQ_VISION_MODELS
+    global GEMINI_API_KEY, GEMINI_API_KEY_2, GEMINI_MODELS
+    global EXTRA_LLM_BASE_URL, EXTRA_LLM_API_KEY, EXTRA_LLM_MODEL
+
+    GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+    GROQ_API_KEY_2 = os.environ.get("GROQ_API_KEY_2", "")
+    GROQ_TEXT_MODELS = _parse_list(
+        os.environ.get("GROQ_TEXT_MODELS", ""),
+        ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+    )
+    GROQ_VISION_MODELS = _parse_list(
+        os.environ.get("GROQ_VISION_MODELS", ""),
+        ["qwen/qwen3.8-27b", "llama-3.2-11b-vision-preview"]
+    )
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
+    GEMINI_API_KEY_2 = os.environ.get("GEMINI_API_KEY_2", "")
+    GEMINI_MODELS = _parse_list(
+        os.environ.get("GEMINI_MODELS", ""),
+        ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+    )
+    EXTRA_LLM_BASE_URL = os.environ.get("EXTRA_LLM_BASE_URL", "")
+    EXTRA_LLM_API_KEY = os.environ.get("EXTRA_LLM_API_KEY", "")
+    EXTRA_LLM_MODEL = os.environ.get("EXTRA_LLM_MODEL", "")
+
 # Search & Verification Thresholds
 try:
     VERIFIED_MIN_CONFIDENCE = int(os.environ.get("VERIFIED_MIN_CONFIDENCE", "40"))
