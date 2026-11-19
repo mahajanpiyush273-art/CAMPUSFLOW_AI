@@ -46,11 +46,14 @@ def test_groq_key(key: str, label: str) -> None:
         try:
             resp = client.chat.completions.create(
                 model=model,
-                messages=[{"role": "user", "content": "Respond with the single word: OK"}],
-                max_tokens=10,
+                messages=[{"role": "user", "content": "Hello! Reply with: CampusFlow AI OK"}],
+                max_tokens=80,
             )
-            ans = resp.choices[0].message.content.strip()
-            print(f"  + [{model}] SUCCESS: {ans}")
+            msg = resp.choices[0].message
+            ans = (msg.content or "").strip()
+            if not ans and getattr(msg, "reasoning", None):
+                ans = "OK (Reasoning model)"
+            print(f"  + [{model}] SUCCESS: {ans or 'OK'}")
             success = True
             break
         except Exception as e:

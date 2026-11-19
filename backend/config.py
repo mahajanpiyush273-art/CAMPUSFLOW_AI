@@ -32,11 +32,11 @@ GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_API_KEY_2 = os.environ.get("GROQ_API_KEY_2", "")
 GROQ_TEXT_MODELS = _parse_list(
     os.environ.get("GROQ_TEXT_MODELS", ""),
-    ["llama-3.3-70b-versatile", "llama-3.1-8b-instant", "llama3-70b-8192", "llama3-8b-8192"]
+    ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
 )
 GROQ_VISION_MODELS = _parse_list(
     os.environ.get("GROQ_VISION_MODELS", ""),
-    ["llama-3.2-11b-vision-preview", "llama-3.2-90b-vision-preview"]
+    ["qwen/qwen3.8-27b", "llama-3.2-11b-vision-preview"]
 )
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
