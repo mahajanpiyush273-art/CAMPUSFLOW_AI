@@ -237,9 +237,9 @@ function appendAssistantMessage(thread, data) {
         card.style.backgroundColor = "#FFFFFF";
 
         card.innerHTML = `
-            <!-- Top Confidence & Source Metadata Header -->
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 10px;">
-                <div id="conf-ring-slot"></div>
+            <!-- Top Verified Notice Header -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 10px;">
+                <span class="badge badge-new" style="font-size: 12.5px; font-weight: 700; padding: 4px 10px;">✓ Verified by Official Notice</span>
                 ${data.mode === 'offline' ? '<span class="badge badge-sample">AI Offline: Exact Notice Excerpt</span>' : ''}
             </div>
 
@@ -289,12 +289,6 @@ function appendAssistantMessage(thread, data) {
                 </div>
             </div>
         `;
-
-        // Mount Confidence Ring
-        const ringSlot = card.querySelector("#conf-ring-slot");
-        if (ringSlot) {
-            ringSlot.appendChild(renderConfidenceRing(data.confidence, data.level));
-        }
 
         // Word-by-word reveal
         const answerBody = card.querySelector("#answer-text-body");

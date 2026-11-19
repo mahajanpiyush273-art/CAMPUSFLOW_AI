@@ -430,7 +430,7 @@ export async function renderMyQuestionsView() {
 
             let badgeHtml = "";
             if (q.status === "answered") {
-                badgeHtml = `<span class="badge badge-new">Answered by Notice (${q.confidence}%)</span>`;
+                badgeHtml = `<span class="badge badge-new">Answered by Notice</span>`;
             } else if (q.status === "admin_replied") {
                 badgeHtml = `<span class="badge badge-category" style="background: var(--brand); color: #fff;">Admin Replied</span>`;
             } else {

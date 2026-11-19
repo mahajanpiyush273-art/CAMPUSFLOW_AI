@@ -33,7 +33,7 @@ export async function initAdminApp() {
     router.register("#/dashboard", async () => renderAdminDashboardView());
 
     router.register("#/upload", async () => {
-        const mod = await import("/static/js/admin/upload.js").catch(err => {
+        const mod = await import("/static/js/admin/upload.js?v=37").catch(err => {
             console.error("Failed to load upload.js:", err);
             return null;
         });
@@ -41,7 +41,7 @@ export async function initAdminApp() {
     });
 
     router.register("#/notices", async () => {
-        const mod = await import("/static/js/admin/manage.js").catch(err => {
+        const mod = await import("/static/js/admin/manage.js?v=37").catch(err => {
             console.error("Failed to load manage.js:", err);
             return null;
         });
@@ -49,7 +49,7 @@ export async function initAdminApp() {
     });
 
     router.register("#/review-queue", async () => {
-        const mod = await import("/static/js/admin/manage.js").catch(err => {
+        const mod = await import("/static/js/admin/manage.js?v=37").catch(err => {
             console.error("Failed to load manage.js:", err);
             return null;
         });
@@ -62,7 +62,7 @@ export async function initAdminApp() {
     });
 
     router.register("#/offices", async () => {
-        const mod = await import("/static/js/admin/manage.js").catch(err => {
+        const mod = await import("/static/js/admin/manage.js?v=37").catch(err => {
             console.error("Failed to load manage.js:", err);
             return null;
         });

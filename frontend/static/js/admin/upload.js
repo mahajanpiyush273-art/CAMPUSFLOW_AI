@@ -85,7 +85,7 @@ function renderStep1Upload(container, slot) {
 
     slot.innerHTML = `
         <div class="card" style="max-width: 760px; padding: 28px;">
-            <div style="display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
+            <div id="upload-mode-tabs-bar" style="display: flex; gap: 12px; margin-bottom: 24px; border-bottom: 1px solid var(--border); padding-bottom: 12px;">
                 <button type="button" id="tab-file" class="btn btn-primary btn-sm">📄 File Upload (PDF, Word, Image, Text)</button>
                 <button type="button" id="tab-paste" class="btn btn-secondary btn-sm">✏️ Type or Paste Notice</button>
             </div>
@@ -96,19 +96,59 @@ function renderStep1Upload(container, slot) {
                     <select id="wizard-doc-type" class="form-input">
                         <option value="Notice" selected>Notice (Standard Circular / Announcement)</option>
                         <option value="Event">Event (Workshop, Fest, Seminar, Hackathon)</option>
-                        <option value="Form">Form (Official Student Application)</option>
+                        <option value="Form">Form (Official Student Application Link)</option>
                         <option value="Handbook">Handbook (Ordinance, Syllabus, Policy)</option>
                     </select>
                 </div>
 
-                <!-- Form Link Input (Asked when Document Type is Form) -->
-                <div id="wizard-form-link-group" class="form-group" style="display: none;">
-                    <label class="form-label" for="wizard-form-link">Form Link / Application URL <span class="text-danger">*</span></label>
-                    <input type="url" id="wizard-form-link" class="form-input" placeholder="https://forms.google.com/... or campus portal application link">
-                    <div class="text-muted" style="font-size: 12px; margin-top: 4px;">Direct link for students to fill or download this application.</div>
+                <!-- Form Direct Link Section (Shown when Document Type is Form - No PDF required) -->
+                <div id="wizard-form-link-section" style="display: none; background: var(--surface-2); padding: 20px; border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: 20px;">
+                    <div style="font-weight: 700; font-size: 15px; margin-bottom: 4px; color: var(--brand);">
+                        📝 Direct Application Form Link
+                    </div>
+                    <p class="text-muted" style="font-size: 13px; margin-bottom: 18px;">
+                        Campus forms are official application links (Google Forms, ERP, or portal URLs). No PDF upload required.
+                    </p>
+
+                    <div class="form-group">
+                        <label class="form-label" for="form-direct-title">Form Title <span class="text-danger">*</span></label>
+                        <input type="text" id="form-direct-title" class="form-input" placeholder="e.g. Bonafide Certificate Application">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="form-direct-url">Official Form Link / URL <span class="text-danger">*</span></label>
+                        <input type="url" id="form-direct-url" class="form-input" placeholder="https://forms.google.com/... or campus ERP link">
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label class="form-label" for="form-direct-dept">Department / Issuer</label>
+                            <input type="text" id="form-direct-dept" class="form-input" placeholder="e.g. Academic Cell">
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="form-direct-office">Campus Office</label>
+                            <select id="form-direct-office" class="form-input">
+                                <option value="">None / Unassigned</option>
+                                ${officesList.map(o => `
+                                    <option value="${o.id}">${escapeHtml(o.name)}</option>
+                                `).join('')}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="form-direct-desc">Description / Instructions</label>
+                        <textarea id="form-direct-desc" class="form-input" rows="3" placeholder="Briefly explain what this form is for and who should submit it..."></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="form-direct-deadline">Submission Deadline (Optional)</label>
+                        <input type="date" id="form-direct-deadline" class="form-input">
+                    </div>
                 </div>
 
-                <!-- File Drag & Drop Zone -->
+                <!-- File Drag & Drop Zone (For Notices, Events, Handbooks) -->
                 <div id="file-drop-area" class="dropzone" style="border: 2px dashed var(--border); border-radius: var(--radius-md); padding: 36px 20px; text-align: center; cursor: pointer; background: var(--surface-2); margin-bottom: 20px; transition: border-color 0.2s;">
                     <div style="font-size: 38px; margin-bottom: 8px;">📑</div>
                     <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">Drag and drop file here, or click to browse</div>
@@ -117,7 +157,7 @@ function renderStep1Upload(container, slot) {
                     <div id="selected-file-name" style="margin-top: 14px; font-weight: 700; color: var(--brand); display: none;"></div>
                 </div>
 
-                <!-- Text Area for Paste Mode -->
+                <!-- Text Area for Paste Mode (For Notices, Events, Handbooks) -->
                 <div id="paste-text-area" class="form-group" style="display: none;">
                     <label class="form-label" for="wizard-pasted-text">Notice Content</label>
                     <textarea id="wizard-pasted-text" class="form-input" rows="10" placeholder="Paste the official notice text here..."></textarea>
@@ -132,6 +172,7 @@ function renderStep1Upload(container, slot) {
         </div>
     `;
 
+    const tabsBar = slot.querySelector("#upload-mode-tabs-bar");
     const tabFile = slot.querySelector("#tab-file");
     const tabPaste = slot.querySelector("#tab-paste");
     const dropArea = slot.querySelector("#file-drop-area");
@@ -140,16 +181,31 @@ function renderStep1Upload(container, slot) {
     const fileNameDisplay = slot.querySelector("#selected-file-name");
     const form = slot.querySelector("#wizard-upload-form");
     const docTypeSelect = slot.querySelector("#wizard-doc-type");
-    const formLinkGroup = slot.querySelector("#wizard-form-link-group");
-    const formLinkInput = slot.querySelector("#wizard-form-link");
+    const formLinkSection = slot.querySelector("#wizard-form-link-section");
+    const submitBtn = slot.querySelector("#btn-submit-upload");
 
     docTypeSelect.addEventListener("change", () => {
         if (docTypeSelect.value === "Form") {
-            formLinkGroup.style.display = "block";
-            formLinkInput.required = true;
+            // Form mode: hide file upload & paste tabs, show direct form link fields
+            tabsBar.style.display = "none";
+            dropArea.style.display = "none";
+            pasteArea.style.display = "none";
+            formLinkSection.style.display = "block";
+            submitBtn.textContent = "📢 Publish Form Link Now";
+            submitBtn.className = "btn btn-accent";
         } else {
-            formLinkGroup.style.display = "none";
-            formLinkInput.required = false;
+            // Notice/Event/Handbook mode: restore file dropzone & paste tabs
+            tabsBar.style.display = "flex";
+            formLinkSection.style.display = "none";
+            submitBtn.textContent = "Continue to AI Extraction →";
+            submitBtn.className = "btn btn-primary";
+            if (uploadMode === "file") {
+                dropArea.style.display = "block";
+                pasteArea.style.display = "none";
+            } else {
+                dropArea.style.display = "none";
+                pasteArea.style.display = "block";
+            }
         }
     });
 
@@ -209,9 +265,52 @@ function renderStep1Upload(container, slot) {
 
     form.addEventListener("submit", async (e) => {
         e.preventDefault();
-        const docType = slot.querySelector("#wizard-doc-type").value;
+        const docType = docTypeSelect.value;
+
+        // If Form mode: Direct publish via API without requiring file or AI extraction
+        if (docType === "Form") {
+            const title = slot.querySelector("#form-direct-title").value.trim();
+            const formLink = slot.querySelector("#form-direct-url").value.trim();
+            const department = slot.querySelector("#form-direct-dept").value.trim();
+            const officeId = parseInt(slot.querySelector("#form-direct-office").value) || null;
+            const description = slot.querySelector("#form-direct-desc").value.trim();
+            const deadline = slot.querySelector("#form-direct-deadline").value || null;
+
+            if (!title) {
+                showToast("Please enter a title for this form.", "error");
+                return;
+            }
+            if (!formLink) {
+                showToast("Please enter the Form link or Application URL.", "error");
+                return;
+            }
+
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `<span class="spinner" style="width: 14px; height: 14px; border-width: 2px;"></span> Publishing Form...`;
+
+            try {
+                const res = await apiPost("/admin/forms/publish", {
+                    title,
+                    form_link: formLink,
+                    category: "Forms",
+                    department,
+                    office_id: officeId,
+                    description,
+                    deadline
+                });
+
+                showToast(`Form '${title}' published successfully!`, "success");
+                window.location.hash = "#/notices";
+            } catch (err) {
+                showToast(err.message || "Failed to publish form.", "error");
+                submitBtn.disabled = false;
+                submitBtn.textContent = "📢 Publish Form Link Now";
+            }
+            return;
+        }
+
+        // Standard Notice/Event/Handbook mode: requires file or pasted text
         const pastedText = slot.querySelector("#wizard-pasted-text").value.trim();
-        const formLink = formLinkInput ? formLinkInput.value.trim() : "";
         const hasFile = fileInput.files && fileInput.files.length > 0;
 
         if (uploadMode === "file" && !hasFile) {
@@ -222,23 +321,19 @@ function renderStep1Upload(container, slot) {
             showToast("Please paste the notice text.", "error");
             return;
         }
-        if (docType === "Form" && !formLink) {
-            showToast("Please enter the Form link or Application URL.", "error");
-            return;
-        }
 
         // Store upload payload and transition to step 2
         container._uploadData = {
             docType,
             uploadMode,
             file: hasFile ? fileInput.files[0] : null,
-            pastedText: pastedText,
-            formLink: formLink
+            pastedText: pastedText
         };
 
         currentStep = 2;
         renderWizard(container);
     });
+}
 }
 
 // -------------------------------------------------------------

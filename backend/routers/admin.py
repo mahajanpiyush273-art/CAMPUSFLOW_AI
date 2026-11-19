@@ -58,6 +58,92 @@ class PublishRequest(BaseModel):
     confirmed: bool
 
 
+class DirectFormPublishRequest(BaseModel):
+    title: str
+    form_link: str
+    category: Optional[str] = "Forms"
+    department: Optional[str] = None
+    office_id: Optional[int] = None
+    description: Optional[str] = None
+    deadline: Optional[str] = None
+
+
+@router.post("/forms/publish")
+async def publish_form_direct(
+    payload: DirectFormPublishRequest,
+    user: Dict[str, Any] = Depends(require_role("admin")),
+):
+    """Directly create and publish an official campus form by link without requiring a PDF file."""
+    if not payload.title.strip():
+        raise HTTPException(status_code=400, detail="Form title is required.")
+    if not payload.form_link.strip():
+        raise HTTPException(status_code=400, detail="Form link / URL is required.")
+
+    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    today_iso = date.today().isoformat()
+    raw_text = (
+        f"Title: {payload.title.strip()}\n"
+        f"Category: Forms\n"
+        f"Department: {payload.department or 'Campus Administration'}\n"
+        f"Description: {payload.description or 'Official student application form.'}\n"
+        f"Official Form Link: {payload.form_link.strip()}\n"
+    )
+
+    with get_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO documents (
+                title, doc_type, category, department, office_id,
+                publish_date, expiry_date, status, is_sample, source_type,
+                raw_text, summary, registration_url,
+                created_by, created_at, published_at
+            ) VALUES (?, 'Form', 'Forms', ?, ?, ?, ?, 'published', 0, 'link', ?, ?, ?, ?, ?, ?)
+        """, (
+            payload.title.strip(),
+            payload.department or "Campus Administration",
+            payload.office_id,
+            today_iso,
+            payload.deadline,
+            raw_text,
+            payload.description or f"Official form application for {payload.title.strip()}",
+            payload.form_link.strip(),
+            user["id"],
+            now_str,
+            now_str,
+        ))
+        doc_id = cursor.lastrowid
+
+        # If a deadline was specified, insert deadline & reminders
+        if payload.deadline:
+            cursor.execute("""
+                INSERT INTO deadlines (document_id, title, due_date, status, category)
+                VALUES (?, ?, ?, 'confirmed', 'Forms')
+            """, (doc_id, f"{payload.title.strip()} Submission Deadline", payload.deadline))
+            dl_id = cursor.lastrowid
+
+            try:
+                due_dt = datetime.strptime(payload.deadline, "%Y-%m-%d")
+                remind_2d = (due_dt - timedelta(days=2)).strftime("%Y-%m-%d 09:00:00")
+                remind_1d = (due_dt - timedelta(days=1)).strftime("%Y-%m-%d 09:00:00")
+                cursor.execute("""
+                    INSERT INTO reminders (deadline_id, remind_at, kind)
+                    VALUES (?, ?, '2d'), (?, ?, '1d')
+                """, (dl_id, remind_2d, dl_id, remind_1d))
+            except Exception:
+                pass
+
+        conn.commit()
+
+    # Index document in FTS5 search index
+    index_document(doc_id)
+
+    return {
+        "ok": True,
+        "document_id": doc_id,
+        "message": f"Form '{payload.title.strip()}' published successfully."
+    }
+
+
 @router.get("/health")
 async def admin_health_check(user: Dict[str, Any] = Depends(require_role("admin"))):
     """Return AI model provider availability and active configurations without exposing keys."""

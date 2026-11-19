@@ -58,6 +58,17 @@ app.add_middleware(
 # 4. Mount Static Assets directory
 FRONTEND_DIR = BASE_DIR / "frontend"
 STATIC_DIR = FRONTEND_DIR / "static"
+
+@app.middleware("http")
+async def add_no_cache_headers(request: Request, call_next):
+    """Disable aggressive browser caching for development and demo accuracy."""
+    response = await call_next(request)
+    if request.url.path.startswith("/static") or request.url.path in ["/admin", "/student", "/login", "/"]:
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+    return response
+
 if STATIC_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
