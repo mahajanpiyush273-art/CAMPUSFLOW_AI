@@ -35,42 +35,45 @@ export async function initStudentApp() {
     
     // Stubs for next modules (will be replaced in steps 22, 23, 24)
     router.register("#/ask", async (args) => {
-        const mod = await import("/static/js/student/ask.js").catch(() => null);
+        const mod = await import("/static/js/student/ask.js?v=42").catch((err) => {
+            console.error("Failed to load ask.js:", err);
+            return null;
+        });
         return mod ? mod.renderAskView(args) : `<div class="card"><h3>Ask Assistant</h3><p class="text-muted">Loading Ask interface...</p></div>`;
     });
 
     router.register("#/notices", async () => {
-        const mod = await import("/static/js/student/info.js").catch(() => null);
+        const mod = await import("/static/js/student/info.js?v=42").catch(() => null);
         return mod ? mod.renderNoticesView() : `<div class="card"><h3>Notices Hub</h3></div>`;
     });
 
     router.register("#/handbooks", async () => {
-        const mod = await import("/static/js/student/info.js").catch(() => null);
+        const mod = await import("/static/js/student/info.js?v=42").catch(() => null);
         return mod ? mod.renderHandbooksView() : `<div class="card"><h3>Handbooks & Rules</h3></div>`;
     });
 
     router.register("#/events", async () => {
-        const mod = await import("/static/js/student/info.js").catch(() => null);
+        const mod = await import("/static/js/student/info.js?v=42").catch(() => null);
         return mod ? mod.renderEventsView() : `<div class="card"><h3>Campus Events</h3></div>`;
     });
 
     router.register("#/deadlines", async () => {
-        const mod = await import("/static/js/student/info.js").catch(() => null);
+        const mod = await import("/static/js/student/info.js?v=42").catch(() => null);
         return mod ? mod.renderDeadlinesView() : `<div class="card"><h3>Deadlines Tracker</h3></div>`;
     });
 
     router.register("#/forms", async (args) => {
-        const mod = await import("/static/js/student/forms.js").catch(() => null);
+        const mod = await import("/static/js/student/forms.js?v=42").catch(() => null);
         return mod ? mod.renderFormsView(args) : `<div class="card"><h3>Official Forms</h3></div>`;
     });
 
     router.register("#/my-questions", async () => {
-        const mod = await import("/static/js/student/forms.js").catch(() => null);
+        const mod = await import("/static/js/student/forms.js?v=42").catch(() => null);
         return mod ? mod.renderMyQuestionsView() : `<div class="card"><h3>My Questions</h3></div>`;
     });
 
     router.register("#/profile", async () => {
-        const mod = await import("/static/js/student/forms.js").catch(() => null);
+        const mod = await import("/static/js/student/forms.js?v=42").catch(() => null);
         return mod ? mod.renderProfileView() : `<div class="card"><h3>Profile</h3></div>`;
     });
 

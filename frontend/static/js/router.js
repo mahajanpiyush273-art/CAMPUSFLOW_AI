@@ -22,18 +22,22 @@ export class HashRouter {
     }
 
     async handleRoute() {
-        let hash = window.location.hash || this.defaultRoute;
+        let rawHash = window.location.hash || this.defaultRoute;
+        
+        // Separate path from query string: e.g. "#/ask?q=exam" -> cleanPath: "#/ask", queryString: "q=exam"
+        const queryIndex = rawHash.indexOf("?");
+        const cleanPath = (queryIndex !== -1 ? rawHash.slice(0, queryIndex) : rawHash).replace(/\/+$/, "") || this.defaultRoute;
         
         // Extract base route (e.g., #/forms/bonafide -> #/forms)
-        const parts = hash.split("/");
-        const baseRoute = parts.length > 2 ? `#/${parts[1]}` : hash;
+        const parts = cleanPath.split("/").filter(Boolean);
+        const baseRoute = parts.length > 2 ? `#/${parts[1]}` : cleanPath;
         
-        const handler = this.routes.get(hash) || this.routes.get(baseRoute);
+        const handler = this.routes.get(cleanPath) || this.routes.get(baseRoute);
 
         // Update active navigation link in sidebar and mobile tabs
         document.querySelectorAll(".nav-link, .mobile-tab-item").forEach(link => {
             const linkHref = link.getAttribute("href");
-            if (linkHref === hash || linkHref === baseRoute) {
+            if (linkHref === cleanPath || linkHref === baseRoute) {
                 link.classList.add("active");
             } else {
                 link.classList.remove("active");
@@ -69,7 +73,7 @@ export class HashRouter {
                     this.container.innerHTML = `
                         <div class="card">
                             <h3>Page Not Found</h3>
-                            <p class="text-muted">The requested section '${hash}' does not exist.</p>
+                            <p class="text-muted">The requested section '${cleanPath}' does not exist.</p>
                             <a href="${this.defaultRoute}" class="btn btn-primary" style="margin-top: 14px;">Return to Dashboard</a>
                         </div>
                     `;
