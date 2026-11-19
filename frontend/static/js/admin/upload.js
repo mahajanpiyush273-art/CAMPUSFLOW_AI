@@ -334,7 +334,6 @@ function renderStep1Upload(container, slot) {
         renderWizard(container);
     });
 }
-}
 
 // -------------------------------------------------------------
 // STEP 2: ANIMATED AI READING STEPPER
