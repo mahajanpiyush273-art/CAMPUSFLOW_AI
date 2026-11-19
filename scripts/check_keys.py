@@ -25,13 +25,23 @@ from backend.config import (
 )
 
 
+def _mask_key(key: str) -> str:
+    if not key:
+        return "EMPTY"
+    if len(key) <= 8:
+        return "***"
+    return f"{key[:4]}...{key[-4:]} (len: {len(key)})"
+
+
 def test_groq_key(key: str, label: str) -> None:
     if not key:
-        print(f"[{label}] NOT CONFIGURED")
+        print(f"[{label}] NOT CONFIGURED (Key is empty)")
         return
 
+    print(f"[{label}] Key detected: {_mask_key(key)}. Testing models...")
     from groq import Groq
     client = Groq(api_key=key, timeout=10.0)
+    success = False
     for model in GROQ_TEXT_MODELS:
         try:
             resp = client.chat.completions.create(
@@ -40,30 +50,49 @@ def test_groq_key(key: str, label: str) -> None:
                 max_tokens=10,
             )
             ans = resp.choices[0].message.content.strip()
-            print(f"[{label} - {model}] OK: {ans}")
-            return
+            print(f"  + [{model}] SUCCESS: {ans}")
+            success = True
+            break
         except Exception as e:
-            print(f"[{label} - {model}] FAIL: {str(e)[:120]}")
+            print(f"  x [{model}] FAILED: {str(e)[:120]}")
+
+    if success:
+        print(f"[{label}] STATUS: READY FOR AI CHAT & EXTRACTION\n")
+    else:
+        print(f"[{label}] STATUS: FAILED (Check if key is valid or rate limited)\n")
 
 
 def test_gemini_key(key: str, label: str) -> None:
     if not key:
-        print(f"[{label}] NOT CONFIGURED")
+        print(f"[{label}] NOT CONFIGURED (Key is empty)")
         return
 
+    print(f"[{label}] Key detected: {_mask_key(key)}. Testing models...")
     import httpx
+    success = False
     for model in GEMINI_MODELS:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}"
         payload = {"contents": [{"parts": [{"text": "Respond with the single word: OK"}]}]}
         try:
             resp = httpx.post(url, json=payload, timeout=10.0)
             if resp.status_code == 200:
-                print(f"[{label} - {model}] OK")
-                return
+                print(f"  + [{model}] SUCCESS: HTTP 200 OK")
+                success = True
+                break
             else:
-                print(f"[{label} - {model}] FAIL: HTTP {resp.status_code}")
+                err_text = ""
+                try:
+                    err_text = resp.json().get("error", {}).get("message", "")
+                except Exception:
+                    err_text = resp.text[:100]
+                print(f"  x [{model}] FAILED (HTTP {resp.status_code}): {err_text[:120]}")
         except Exception as e:
-            print(f"[{label} - {model}] FAIL: {str(e)[:120]}")
+            print(f"  x [{model}] FAILED: {str(e)[:120]}")
+
+    if success:
+        print(f"[{label}] STATUS: READY FOR AI CHAT & EXTRACTION\n")
+    else:
+        print(f"[{label}] STATUS: FAILED (Check if key is valid or Google Generative Language API is enabled)\n")
 
 
 def main():

@@ -4,6 +4,9 @@ import httpx
 from groq import Groq
 
 
+from backend.config import GROQ_VISION_MODELS, GEMINI_MODELS
+
+
 def extract_text_from_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> str:
     """Extract text from a notice image using Groq Vision or Gemini Flash."""
     groq_api_key = os.environ.get("GROQ_API_KEY")
@@ -11,48 +14,50 @@ def extract_text_from_image(image_bytes: bytes, mime_type: str = "image/jpeg") -
 
     if not groq_api_key and not gemini_api_key:
         raise ValueError(
-            "No API key found. Please set $env:GROQ_API_KEY (or $env:GEMINI_API_KEY) in your terminal."
+            "No API key found. Please set GROQ_API_KEY (or GEMINI_API_KEY) in your .env file."
         )
 
     # 1. Try Groq Vision first if GROQ_API_KEY is available
     if groq_api_key:
-        try:
-            client = Groq(api_key=groq_api_key)
-            base64_image = base64.b64encode(image_bytes).decode("utf-8")
-
-            # Active multimodal vision model on Groq
-            response = client.chat.completions.create(
-                model="qwen/qwen3.8-27b",
-                messages=[
-                    {
-                        "role": "user",
-                        "content": [
-                            {
-                                "type": "text",
-                                "text": (
-                                    "Extract all readable text from this campus notice image accurately. "
-                                    "Preserve all headings, dates, announcements, rules, and contact info. "
-                                    "Return only the extracted text without introductory or concluding remarks."
-                                ),
-                            },
-                            {
-                                "type": "image_url",
-                                "image_url": {
-                                    "url": f"data:{mime_type};base64,{base64_image}",
+        base64_image = base64.b64encode(image_bytes).decode("utf-8")
+        client = Groq(api_key=groq_api_key)
+        for model in GROQ_VISION_MODELS:
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {
+                            "role": "user",
+                            "content": [
+                                {
+                                    "type": "text",
+                                    "text": (
+                                        "Extract all readable text from this campus notice image accurately. "
+                                        "Preserve all headings, dates, announcements, rules, and contact info. "
+                                        "Return only the extracted text without introductory or concluding remarks."
+                                    ),
                                 },
-                            },
-                        ],
-                    }
-                ],
-                temperature=0.1,
-                max_tokens=2048,
-            )
-            content = response.choices[0].message.content
-            return content.strip() if content else ""
-        except Exception as e:
-            # If Groq fails and Gemini key is available, fallback to Gemini
-            if not gemini_api_key:
-                raise e
+                                {
+                                    "type": "image_url",
+                                    "image_url": {
+                                        "url": f"data:{mime_type};base64,{base64_image}",
+                                    },
+                                },
+                            ],
+                        }
+                    ],
+                    temperature=0.1,
+                    max_tokens=2048,
+                )
+                content = response.choices[0].message.content
+                if content and content.strip():
+                    return content.strip()
+            except Exception:
+                continue
+
+        # If Groq fails and no Gemini key is available, report error
+        if not gemini_api_key:
+            raise ValueError("Failed to extract text using Groq Vision models.")
 
     # 2. Use Gemini Flash API if GEMINI_API_KEY is available
     if gemini_api_key:
@@ -62,7 +67,7 @@ def extract_text_from_image(image_bytes: bytes, mime_type: str = "image/jpeg") -
             "Preserve all headings, dates, announcements, rules, and contact info. "
             "Return only the extracted text without introductory or concluding remarks."
         )
-        for gemini_model in ["gemini-2.5-flash", "gemini-1.5-flash"]:
+        for gemini_model in GEMINI_MODELS:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{gemini_model}:generateContent?key={gemini_api_key}"
                 payload = {
