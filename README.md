@@ -79,6 +79,25 @@ Detailed execution logs are exported to `tests/results.csv`.
 
 ---
 
+## 💻 Programming Languages & Technology Stack
+
+### Frontend (User Interface)
+| Language / Tech | Role in Project | Why We Used It |
+| :--- | :--- | :--- |
+| **HTML5** | Page layout, semantic structure, forms, accessible dialogs | Native browser compatibility with zero compilation overhead |
+| **CSS3** | Modern styling, tokens (`tokens.css`), Flexbox, CSS Grid, Glassmorphism, animations | Clean, responsive UI with zero external CSS framework dependencies (no Tailwind bloat) |
+| **JavaScript (ES6+)** | Dynamic SPA routing, DOM updates, Fetch API calls, interactive wizards | Vanilla modular JavaScript (`import`/`export`) providing lightning-fast navigation with **0 npm packages** |
+
+### Backend (Server & Intelligence)
+| Language / Tech | Role in Project | Why We Used It |
+| :--- | :--- | :--- |
+| **Python 3.10+** | Core server logic, AI orchestration, document parsing, OCR pipelines | Industry-standard language for AI, FastAPI web services, and robust text extraction |
+| **FastAPI** | Asynchronous REST API framework, session guards, and routing | Sub-millisecond ASGI performance with automatic schema validation |
+| **SQL (SQLite 3)** | Relational tables (`users`, `notices`, `deadlines`, `offices`) | Fast, local, ACID-compliant storage in Write-Ahead Logging (`WAL`) mode |
+| **SQLite FTS5 (BM25)** | High-speed Full-Text Search virtual tables | Sub-5ms keyword ranking with exact matching for roll numbers, circulars, and dates |
+
+---
+
 ## 🛠️ Architecture & Tech Stack
 
 ```text
