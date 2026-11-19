@@ -101,6 +101,13 @@ function renderStep1Upload(container, slot) {
                     </select>
                 </div>
 
+                <!-- Form Link Input (Asked when Document Type is Form) -->
+                <div id="wizard-form-link-group" class="form-group" style="display: none;">
+                    <label class="form-label" for="wizard-form-link">Form Link / Application URL <span class="text-danger">*</span></label>
+                    <input type="url" id="wizard-form-link" class="form-input" placeholder="https://forms.google.com/... or campus portal application link">
+                    <div class="text-muted" style="font-size: 12px; margin-top: 4px;">Direct link for students to fill or download this application.</div>
+                </div>
+
                 <!-- File Drag & Drop Zone -->
                 <div id="file-drop-area" class="dropzone" style="border: 2px dashed var(--border); border-radius: var(--radius-md); padding: 36px 20px; text-align: center; cursor: pointer; background: var(--surface-2); margin-bottom: 20px; transition: border-color 0.2s;">
                     <div style="font-size: 38px; margin-bottom: 8px;">📑</div>
@@ -132,6 +139,19 @@ function renderStep1Upload(container, slot) {
     const fileInput = slot.querySelector("#wizard-file-input");
     const fileNameDisplay = slot.querySelector("#selected-file-name");
     const form = slot.querySelector("#wizard-upload-form");
+    const docTypeSelect = slot.querySelector("#wizard-doc-type");
+    const formLinkGroup = slot.querySelector("#wizard-form-link-group");
+    const formLinkInput = slot.querySelector("#wizard-form-link");
+
+    docTypeSelect.addEventListener("change", () => {
+        if (docTypeSelect.value === "Form") {
+            formLinkGroup.style.display = "block";
+            formLinkInput.required = true;
+        } else {
+            formLinkGroup.style.display = "none";
+            formLinkInput.required = false;
+        }
+    });
 
     tabFile.addEventListener("click", () => {
         uploadMode = "file";
@@ -191,6 +211,7 @@ function renderStep1Upload(container, slot) {
         e.preventDefault();
         const docType = slot.querySelector("#wizard-doc-type").value;
         const pastedText = slot.querySelector("#wizard-pasted-text").value.trim();
+        const formLink = formLinkInput ? formLinkInput.value.trim() : "";
         const hasFile = fileInput.files && fileInput.files.length > 0;
 
         if (uploadMode === "file" && !hasFile) {
@@ -201,13 +222,18 @@ function renderStep1Upload(container, slot) {
             showToast("Please paste the notice text.", "error");
             return;
         }
+        if (docType === "Form" && !formLink) {
+            showToast("Please enter the Form link or Application URL.", "error");
+            return;
+        }
 
         // Store upload payload and transition to step 2
         container._uploadData = {
             docType,
             uploadMode,
             file: hasFile ? fileInput.files[0] : null,
-            pastedText: pastedText
+            pastedText: pastedText,
+            formLink: formLink
         };
 
         currentStep = 2;
@@ -256,6 +282,9 @@ async function renderStep2AiReading(container, slot) {
         formData.append("pasted_text", data.pastedText);
     }
     formData.append("doc_type", data.docType);
+    if (data.formLink) {
+        formData.append("registration_url", data.formLink);
+    }
 
     try {
         // Step 1 complete simulation visually
@@ -424,6 +453,15 @@ function renderStep3Review(container, slot) {
                             <input type="url" id="edit-reg-url" class="form-input" placeholder="https://..." value="${escapeHtml(d.registration_url || '')}">
                         </div>
                     </div>
+
+                    <!-- Form specific fields -->
+                    <div id="form-fields-block" style="${d.doc_type === 'Form' ? '' : 'display: none;'} margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--border);">
+                        <div class="form-group">
+                            <label class="form-label" for="edit-form-link">Form Link / Application URL <span class="text-danger">*</span></label>
+                            <input type="url" id="edit-form-link" class="form-input" placeholder="https://forms.google.com/... or campus portal application link" value="${escapeHtml(d.registration_url || '')}">
+                            <div class="text-muted" style="font-size: 12px; margin-top: 4px;">Direct link for students to fill or download this application.</div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Detected Deadlines Table -->
@@ -466,11 +504,13 @@ function renderStep3Review(container, slot) {
         </div>
     `;
 
-    // Dynamic show/hide for event fields
+    // Dynamic show/hide for event and form fields
     const docTypeSelect = slot.querySelector("#edit-doc-type");
     const eventBlock = slot.querySelector("#event-fields-block");
+    const formBlock = slot.querySelector("#form-fields-block");
     docTypeSelect.addEventListener("change", () => {
         eventBlock.style.display = docTypeSelect.value === "Event" ? "block" : "none";
+        formBlock.style.display = docTypeSelect.value === "Form" ? "block" : "none";
     });
 
     // Add Deadline button listener
@@ -561,10 +601,18 @@ function collectFormData(slot) {
         }
     });
 
+    const docTypeVal = slot.querySelector("#edit-doc-type").value;
+    let regUrl = null;
+    if (docTypeVal === "Form") {
+        regUrl = slot.querySelector("#edit-form-link")?.value.trim() || null;
+    } else if (docTypeVal === "Event") {
+        regUrl = slot.querySelector("#edit-reg-url")?.value.trim() || null;
+    }
+
     return {
         title: slot.querySelector("#edit-title").value.trim(),
         category: slot.querySelector("#edit-category").value,
-        doc_type: slot.querySelector("#edit-doc-type").value,
+        doc_type: docTypeVal,
         department: slot.querySelector("#edit-department").value.trim() || null,
         office_id: parseInt(slot.querySelector("#edit-office-id").value) || null,
         publish_date: slot.querySelector("#edit-publish-date").value || null,
@@ -572,7 +620,7 @@ function collectFormData(slot) {
         raw_text: slot.querySelector("#edit-raw-text").value.trim(),
         event_start: slot.querySelector("#edit-event-start")?.value.trim() || null,
         venue: slot.querySelector("#edit-venue")?.value.trim() || null,
-        registration_url: slot.querySelector("#edit-reg-url")?.value.trim() || null,
+        registration_url: regUrl,
         deadlines: deadlines
     };
 }
@@ -639,6 +687,15 @@ function renderStep4Publish(container, slot) {
                     </div>
                     <span class="badge badge-accent">Draft</span>
                 </div>
+
+                ${d.registration_url ? `
+                    <div style="margin-top: 6px; font-size: 13px;">
+                        <strong>${d.doc_type === 'Form' ? 'Form Link' : 'Registration URL'}:</strong>
+                        <a href="${escapeHtml(d.registration_url)}" target="_blank" rel="noopener" style="color: var(--brand); word-break: break-all; margin-left: 6px;">
+                            ${escapeHtml(d.registration_url)}
+                        </a>
+                    </div>
+                ` : ''}
 
                 ${d.deadlines && d.deadlines.length > 0 ? `
                     <div style="margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px;">

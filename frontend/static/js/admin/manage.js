@@ -33,7 +33,6 @@ export async function renderNoticesManagerView() {
                     <option value="">All Statuses</option>
                     <option value="published">Published</option>
                     <option value="draft">Drafts</option>
-                    <option value="unpublished">Unpublished</option>
                 </select>
                 <select id="notices-category-filter" class="form-input">
                     <option value="">All Categories</option>
@@ -357,7 +356,6 @@ async function loadOffices(container) {
                             <th>Location</th>
                             <th>Hours</th>
                             <th>Contact</th>
-                            <th>Keywords Match</th>
                             <th style="text-align: right;">Action</th>
                         </tr>
                     </thead>
@@ -370,11 +368,6 @@ async function loadOffices(container) {
                                 <td>
                                     <div>📞 ${escapeHtml(o.phone)}</div>
                                     <div class="text-muted" style="font-size: 12px;">✉️ ${escapeHtml(o.email)}</div>
-                                </td>
-                                <td>
-                                    <span class="badge" style="background: var(--surface-2); font-size: 11.5px;">
-                                        ${escapeHtml(o.keywords || 'none')}
-                                    </span>
                                 </td>
                                 <td style="text-align: right;">
                                     <button class="btn btn-secondary btn-sm btn-edit-office" style="padding: 4px 10px;">Edit</button>

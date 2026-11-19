@@ -70,6 +70,7 @@ async def upload_document(
     file: Optional[UploadFile] = File(None),
     pasted_text: Optional[str] = Form(None),
     doc_type: Optional[str] = Form(None),
+    registration_url: Optional[str] = Form(None),
     user: Dict[str, Any] = Depends(require_role("admin")),
 ):
     """
@@ -141,7 +142,7 @@ async def upload_document(
             fields.get("summary"),
             fields.get("event", {}).get("start"),
             fields.get("event", {}).get("venue"),
-            fields.get("event", {}).get("registration_url"),
+            registration_url or fields.get("event", {}).get("registration_url"),
             json.dumps(fields),
             json.dumps(flags),
             user["id"],
@@ -167,7 +168,7 @@ async def upload_document(
         "summary": fields.get("summary") or "",
         "event_start": fields.get("event", {}).get("start"),
         "venue": fields.get("event", {}).get("venue"),
-        "registration_url": fields.get("event", {}).get("registration_url"),
+        "registration_url": registration_url or fields.get("event", {}).get("registration_url"),
         "deadlines": fields.get("deadlines") or [],
         "flags": flags,
         "provider": extraction_result.get("provider"),

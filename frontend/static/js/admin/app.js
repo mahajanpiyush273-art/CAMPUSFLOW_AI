@@ -57,11 +57,8 @@ export async function initAdminApp() {
     });
 
     router.register("#/submissions", async () => {
-        const mod = await import("/static/js/admin/manage.js").catch(err => {
-            console.error("Failed to load manage.js:", err);
-            return null;
-        });
-        return mod ? mod.renderSubmissionsView() : `<div class="card"><h3>Form Submissions</h3><p class="text-muted">Loading submissions...</p></div>`;
+        window.location.hash = "#/dashboard";
+        return renderAdminDashboardView();
     });
 
     router.register("#/offices", async () => {
@@ -73,11 +70,8 @@ export async function initAdminApp() {
     });
 
     router.register("#/ai-status", async () => {
-        const mod = await import("/static/js/admin/manage.js").catch(err => {
-            console.error("Failed to load manage.js:", err);
-            return null;
-        });
-        return mod ? mod.renderAiStatusView() : `<div class="card"><h3>AI Status</h3><p class="text-muted">Loading status...</p></div>`;
+        window.location.hash = "#/dashboard";
+        return renderAdminDashboardView();
     });
 
     router.init();

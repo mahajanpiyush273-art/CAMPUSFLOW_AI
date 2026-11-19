@@ -35,12 +35,6 @@ export async function renderAdminDashboardView() {
                 <div class="text-muted" style="font-size: 11.5px; margin-top: 2px;">Awaiting official reply</div>
             </div>
 
-            <div class="card" style="padding: 18px; border-top: 4px solid var(--brand);">
-                <div class="text-muted" style="font-size: 12px; font-weight: 700; text-transform: uppercase;">Avg Confidence</div>
-                <div id="kpi-avg-conf" style="font-size: 32px; font-weight: 800; color: var(--brand); margin-top: 4px;">0%</div>
-                <div class="text-muted" style="font-size: 11.5px; margin-top: 2px;">Grounded citation score</div>
-            </div>
-
             <div class="card" style="padding: 18px; border-top: 4px solid #3B82F6;">
                 <div class="text-muted" style="font-size: 12px; font-weight: 700; text-transform: uppercase;">Deadlines Completed</div>
                 <div id="kpi-deadlines-done" style="font-size: 32px; font-weight: 800; color: #2563EB; margin-top: 4px;">0</div>
@@ -92,7 +86,6 @@ async function loadAdminInsights(container) {
         animateCountUp(container.querySelector("#kpi-verified-rate"), stats.answered_pct || 0);
         container.querySelector("#kpi-verified-rate").textContent = `${stats.answered_pct || 0}%`;
         animateCountUp(container.querySelector("#kpi-pending-q"), stats.pending_review_count || 0);
-        container.querySelector("#kpi-avg-conf").textContent = `${stats.avg_confidence || 0}%`;
         animateCountUp(container.querySelector("#kpi-deadlines-done"), stats.deadlines_marked_done || 0);
 
         // 2. Render Daily SVG Bar Chart
